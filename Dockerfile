@@ -60,7 +60,7 @@ RUN make install
 WORKDIR /opt/DataManager/
 COPY . /opt/DataManager/
 
-RUN rm -r build
+RUN rm -rf build
 WORKDIR /opt/DataManager/build
 RUN cmake -DCMAKE_BUILD_TYPE=release ..
 RUN make
