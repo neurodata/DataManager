@@ -8,8 +8,7 @@ RUN apt-get install -y git \
     cmake \
     wget \
     libgoogle-glog-dev \
-    libgflags-dev \
-    gdbserver
+    libgflags-dev
 
 # libtiff
 RUN apt-get install -y libtiff5 \ 
@@ -58,4 +57,12 @@ RUN ./configure --prefix=/usr/local/
 RUN make -j $(nproc)
 RUN make install
 
-WORKDIR /opt/DataManager
+WORKDIR /opt/DataManager/
+COPY . /opt/DataManager/
+
+RUN rm -r build
+WORKDIR /opt/DataManager/build
+RUN cmake -DCMAKE_BUILD_TYPE=release ..
+RUN make
+
+CMD ["/opt/DataManager/build/bin/ingest", "-help"]
