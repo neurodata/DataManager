@@ -24,6 +24,7 @@ DEFINE_int64(yoffset, 0, "The y-offset of the input file.");
 DEFINE_int64(zoffset, 0, "The z-offset of the input file.");
 DEFINE_string(scale, "0", "String key for scale to use.");
 DEFINE_bool(exampleManifest, false, "If true, write an example manifest to 'manifest.ex.json' and quit.");
+DEFINE_bool(subtractVoxelOffset, false, "If false, provided coordinates do not include the global voxel offset of the dataset (e.g. are 0-indexed with respect to the data on disk). If true, the voxel offset is subtracted from the cutout arguments in a pre-processing step.");
 
 int main(int argc, char* argv[]) {
     google::InstallFailureSignalHandler();
@@ -58,7 +59,7 @@ int main(int argc, char* argv[]) {
         auto yrng = std::array<int, 2>({{static_cast<int>(FLAGS_yoffset), static_cast<int>(FLAGS_y + FLAGS_yoffset)}});
         auto zrng = std::array<int, 2>({{static_cast<int>(FLAGS_zoffset), static_cast<int>(FLAGS_z + FLAGS_zoffset)}});
         
-        BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale);   
+        BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);   
     }
 
     return EXIT_SUCCESS;

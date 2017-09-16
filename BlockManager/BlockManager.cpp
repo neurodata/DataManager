@@ -13,7 +13,7 @@ BlockManager::BlockManager(const std::string& directory_path_name, std::shared_p
 }
 
 BlockManager::~BlockManager() {
-    // _flush(); // TODO(adb): this happens automatically in each block
+    // _flush(); // TODO(adb): this happens automatically in each block, so I think we can remove here
 }
 
 std::array<int, 3> BlockManager::getChunkSizeForScale(const std::string& scale_key) {
@@ -24,24 +24,27 @@ std::array<int, 3> BlockManager::getChunkSizeForScale(const std::string& scale_k
     return scale.chunk_sizes[0];
 }
 
-std::vector< BlockKey > BlockManager::_blocksForBoundingBox(const std::array<int, 2>& xrng, const std::array<int, 2>& yrng, const std::array<int, 2>& zrng, const std::string& scale_key) {
+std::array<int, 3> BlockManager::getVoxelOffsetForScale(const std::string& scale_key) {
     const auto scale = manifest->get_scale(scale_key);
-    // Construct the bounding box by translating the xyz range by -voxel_offset and divivding by the chunk_size (assuming just {x,y,z} chunks here)
-    const auto voxel_offset = scale.voxel_offset;
-    std::array<int, 2> _xrng = {{xrng[0] - voxel_offset[0], xrng[1] - voxel_offset[1]}};
-    std::array<int, 2> _yrng = {{yrng[0] - voxel_offset[0], yrng[1] - voxel_offset[1]}};
-    std::array<int, 2> _zrng = {{zrng[0] - voxel_offset[0], zrng[1] - voxel_offset[1]}};
-    
+    return std::array<int, 3>({{scale.voxel_offset[0], scale.voxel_offset[1], scale.voxel_offset[2]}});
+}
+
+std::vector< BlockKey > BlockManager::_blocksForBoundingBox(const std::array<int, 2>& xrng, const std::array<int, 2>& yrng, const std::array<int, 2>& zrng, const std::string& scale_key) {
+    const auto scale = manifest->get_scale(scale_key);    
     const auto chunk_size = getChunkSizeForScale(scale_key);
 
-    _xrng[0] = floor(_xrng[0] / chunk_size[0]);
-    _xrng[1] = ceil(_xrng[1] / chunk_size[0]);
+    std::array<int, 2> _xrng;
+    std::array<int, 2> _yrng;
+    std::array<int, 2> _zrng;
 
-    _yrng[0] = floor(_yrng[0] / chunk_size[1]);
-    _yrng[1] = ceil(_yrng[1] / chunk_size[1]);
+    _xrng[0] = floor(static_cast<double>(xrng[0]) / static_cast<double>(chunk_size[0]));
+    _xrng[1] = ceil(static_cast<double>(xrng[1]) / static_cast<double>(chunk_size[0]));
 
-    _zrng[0] = floor(_zrng[0] / chunk_size[2]);
-    _zrng[1] = ceil(_zrng[1] / chunk_size[2]);
+    _yrng[0] = floor(static_cast<double>(yrng[0]) / static_cast<double>(chunk_size[1]));
+    _yrng[1] = ceil(static_cast<double>(yrng[1]) / static_cast<double>(chunk_size[1]));
+
+    _zrng[0] = floor(static_cast<double>(zrng[0]) / static_cast<double>(chunk_size[2]));
+    _zrng[1] = ceil(static_cast<double>(zrng[1]) / static_cast<double>(chunk_size[2]));
     
     std::vector< BlockKey > ret;
     ret.reserve((_xrng[1] - _xrng[0] + 1) * (_yrng[1] - _yrng[0] + 1) * (_zrng[1] - _zrng[0] + 1));
