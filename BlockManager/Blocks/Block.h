@@ -4,56 +4,71 @@
 #include "../DataArray/DataArray.h"
 
 #include <memory>
-#include <string> 
+#include <string>
 
 namespace BlockManager_namespace {
 
 class Block {
-public:
-    Block(const std::string& path_name): path_name(path_name) {}
-    Block(const std::string& path_name, int xdim, int ydim, int zdim, size_t dtype_size): path_name(path_name), _xdim(xdim), _ydim(ydim), _zdim(zdim), _dtype_size(dtype_size) {}
+   public:
+    Block(const std::string& path_name) : path_name(path_name) {}
+    Block(const std::string& path_name, int xdim, int ydim, int zdim,
+          size_t dtype_size)
+        : path_name(path_name),
+          _xdim(xdim),
+          _ydim(ydim),
+          _zdim(zdim),
+          _dtype_size(dtype_size) {}
     ~Block() {}
 
     virtual void load() = 0;
     virtual void save() = 0;
 
-    template< typename T >
-    void add(const DataArray_namespace::DataArray3D<T>& arr, bool overwrite=false) {
+    template <typename T>
+    void add(const DataArray_namespace::DataArray3D<T>& arr,
+             bool overwrite = false) {
         // TODO(adb): check that this method works
         CHECK(false) << "Not implemented.";
-    #if 0
+#if 0
         DataArray_namespace::DataArray3D<T> local_arr(data, _xdim, _ydim, _zdim);
 
         if (overwrite) local_arr.clear();
         local_arr += arr;
-    #endif
+#endif
     }
-    
-    template< typename T >
-    void add(const typename DataArray_namespace::DataArray3D<T>::array_view& view, int x_arr_offset, int y_arr_offset, int z_arr_offset, bool overwrite=false) {
+
+    template <typename T>
+    void add(
+        const typename DataArray_namespace::DataArray3D<T>::array_view& view,
+        int x_arr_offset, int y_arr_offset, int z_arr_offset,
+        bool overwrite = false) {
         if (_just_initialized) {
-            _allocate();            
+            _allocate();
         }
-        DataArray_namespace::DataArray3D<T> local_arr(data, _xdim, _ydim, _zdim);
+        DataArray_namespace::DataArray3D<T> local_arr(data, _xdim, _ydim,
+                                                      _zdim);
 
         if (overwrite) local_arr.clear();
         typedef typename DataArray_namespace::DataArray3D<T>::index index;
-        
+
         // Iterate over the view
         const auto num_dims = view.dimensionality;
         CHECK(num_dims == 3);
 
-        for(int x = 0, local_x = x_arr_offset; x < view.shape()[0]; x++, local_x++) {
-            for(int y = 0, local_y = y_arr_offset; y < view.shape()[1]; y++, local_y++) {
-                for(int z = 0, local_z = z_arr_offset; z < view.shape()[2]; z++, local_z++) {
-                    local_arr(local_x, local_y, local_z) += view[index(x)][index(y)][index(z)];
+        for (int x = 0, local_x = x_arr_offset; x < view.shape()[0];
+             x++, local_x++) {
+            for (int y = 0, local_y = y_arr_offset; y < view.shape()[1];
+                 y++, local_y++) {
+                for (int z = 0, local_z = z_arr_offset; z < view.shape()[2];
+                     z++, local_z++) {
+                    local_arr(local_x, local_y, local_z) +=
+                        view[index(x)][index(y)][index(z)];
                 }
             }
         }
 
         local_arr.copy(data, _xdim, _ydim, _zdim);
         _dirty = true;
-        _flush(); // flush on write for now
+        _flush();  // flush on write for now
     }
 
     // Lazily load data from disk only when we need it
@@ -62,21 +77,26 @@ public:
     // Determine if we need to flush this block to disk before quitting
     bool is_dirty() const { return _dirty; }
 
-    static std::string SetNeuroglancerFileName(int xstart, int xend, int ystart, int yend, int zstart, int zend, const std::array<int, 3>& voxel_offset={{0,0,0}}) {
-        // neuroglancer files are written into the global coordinate space, whereas block coordinates use the data bounding box coordinate space, so we need to add the voxel_offset to the filename.
+    static std::string SetNeuroglancerFileName(
+        int xstart, int xend, int ystart, int yend, int zstart, int zend,
+        const std::array<int, 3>& voxel_offset = {{0, 0, 0}}) {
+        // neuroglancer files are written into the global coordinate space,
+        // whereas block coordinates use the data bounding box coordinate space,
+        // so we need to add the voxel_offset to the filename.
         const auto xstart_str = std::to_string(xstart + voxel_offset[0]);
         const auto xend_str = std::to_string(xend + voxel_offset[0]);
         const auto ystart_str = std::to_string(ystart + voxel_offset[1]);
-        const auto yend_str = std::to_string(yend + voxel_offset[1]);  
+        const auto yend_str = std::to_string(yend + voxel_offset[1]);
         const auto zstart_str = std::to_string(zstart + voxel_offset[2]);
         const auto zend_str = std::to_string(zend + voxel_offset[2]);
-        
-        return xstart_str + "-" + xend_str + "_" + ystart_str + "-" + yend_str + "_" + zstart_str + "-" + zend_str;
+
+        return xstart_str + "-" + xend_str + "_" + ystart_str + "-" + yend_str +
+               "_" + zstart_str + "-" + zend_str;
     }
 
-protected:
+   protected:
     std::string path_name;
-    std::unique_ptr<char[]> data; // C order
+    std::unique_ptr<char[]> data;  // C order
     int _xdim;
     int _ydim;
     int _zdim;
@@ -101,11 +121,10 @@ protected:
         }
         data.reset();
         _data_loaded = false;
-        _dirty = false; 
+        _dirty = false;
     }
-    
 };
 
-}
+}  // namespace BlockManager_namespace
 
-#endif // BLOCK_H
+#endif  // BLOCK_H

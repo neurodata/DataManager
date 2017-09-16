@@ -12,12 +12,14 @@ void TiffArray32::load(const std::string& filename) {
         TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
 
-        unsigned char* data = (unsigned char*)_TIFFmalloc((tsize_t)(TIFFScanlineSize(tif)));
+        unsigned char* data =
+            (unsigned char*)_TIFFmalloc((tsize_t)(TIFFScanlineSize(tif)));
 
-        for(auto row = 0; row < height; row++) {
+        for (auto row = 0; row < height; row++) {
             TIFFReadScanline(tif, data, row);
-            for(int x=0; x < width; x++) { 
-                (*M)[x][row][page] = static_cast<uint32_t>(data[x * sizeof(uint32_t)]);
+            for (int x = 0; x < width; x++) {
+                (*M)[x][row][page] =
+                    static_cast<uint32_t>(data[x * sizeof(uint32_t)]);
             }
         }
 

@@ -14,7 +14,7 @@ void AnnoBlock32::load() {
 }
 
 void AnnoBlock32::save() {
-    switch(_format) {
+    switch (_format) {
         case AnnoBlockFormat::RAW: {
             _saveRaw();
         } break;
@@ -27,13 +27,14 @@ void AnnoBlock32::save() {
 void AnnoBlock32::_saveRaw() {
     // Convert data to Fortran order
     DataArray3D<uint32_t> local_arr(data, _xdim, _ydim, _zdim);
-   
-    DataArray3D<uint32_t> fortran_arr(_xdim, _ydim, _zdim, boost::fortran_storage_order());
 
-    for(int x=0; x<_xdim; x++) {
-        for(int y=0; y<_ydim; y++) {
-            for(int z=0; z<_zdim; z++) {
-                fortran_arr(x,y,z) = local_arr(x,y,z);
+    DataArray3D<uint32_t> fortran_arr(_xdim, _ydim, _zdim,
+                                      boost::fortran_storage_order());
+
+    for (int x = 0; x < _xdim; x++) {
+        for (int y = 0; y < _ydim; y++) {
+            for (int z = 0; z < _zdim; z++) {
+                fortran_arr(x, y, z) = local_arr(x, y, z);
             }
         }
     }
@@ -44,13 +45,11 @@ void AnnoBlock32::_saveRaw() {
 
     try {
         const auto filepath = fs::path(path_name);
-        fs::ofstream f(filepath, std::ios_base::binary );
-        std::copy( 
-            _tmp_data.get(), 
-            _tmp_data.get() + (_xdim * _ydim * _zdim * sizeof(uint32_t)),
-            std::ostreambuf_iterator<char>(f));
-    }   
-    catch (const fs::filesystem_error& ex) {
+        fs::ofstream f(filepath, std::ios_base::binary);
+        std::copy(_tmp_data.get(),
+                  _tmp_data.get() + (_xdim * _ydim * _zdim * sizeof(uint32_t)),
+                  std::ostreambuf_iterator<char>(f));
+    } catch (const fs::filesystem_error& ex) {
         LOG(FATAL) << "Error: Failed to write raw block to disk. " << ex.what();
     }
 }
