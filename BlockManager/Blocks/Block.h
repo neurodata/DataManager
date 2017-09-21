@@ -54,11 +54,11 @@ class Block {
         const auto num_dims = view.dimensionality;
         CHECK(num_dims == 3);
 
-        for (int x = 0, local_x = x_arr_offset; x < view.shape()[0];
+        for (size_t x = 0, local_x = x_arr_offset; x < view.shape()[0];
              x++, local_x++) {
-            for (int y = 0, local_y = y_arr_offset; y < view.shape()[1];
+            for (size_t y = 0, local_y = y_arr_offset; y < view.shape()[1];
                  y++, local_y++) {
-                for (int z = 0, local_z = z_arr_offset; z < view.shape()[2];
+                for (size_t z = 0, local_z = z_arr_offset; z < view.shape()[2];
                      z++, local_z++) {
                     local_arr(local_x, local_y, local_z) +=
                         view[index(x)][index(y)][index(z)];
