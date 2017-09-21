@@ -26,16 +26,19 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 # add the binary dir to the search path for include files
 # so we find DataManagerHandler.h
+include_directories("${CMAKE_SOURCE_DIR}")
 include_directories("${CMAKE_BINARY_DIR}")
 include_directories("${CMAKE_SOURCE_DIR}/DataManager")
 
 #add_subdirectory(DataManager)
 add_subdirectory(BlockManager)
 add_subdirectory(DataArray)
+add_subdirectory(third_party/CompressedSegmentation)
 
 #set(DATA_MANAGER_LIBRARIES DataManager)
 set(BLOCK_MANAGER_LIBRARIES BlockManager)
 set(DATA_ARRAY_LIBRARIES DataArray)
+set(NG_COMPRESSED_SEG_LIBRARIES compress_segmentation)
 
 add_executable(ingest Ingest.cpp)
 

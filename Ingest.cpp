@@ -12,16 +12,21 @@
 
 namespace fs = boost::filesystem;
 
+static bool ValidateInputFileFormat(const char* filename, const std::string& value) {
+    if (value == std::string("tif")) {
+        return true;
+    }
+    return false;
+}
+
 DEFINE_string(ingestdir, "",
               "Path to the ingest directory containing a Neuroglancer JSON "
               "Manifest for this ingest job.");
 DEFINE_string(input, "", "Path to the input file to ingest.");
 DEFINE_string(
     format, "tif",
-    "Input file format. Currently only 'tif' is supported. Defaults to 'tif'.");
-DEFINE_string(
-    mode, "image",
-    "Ingest mode. Currently only image or annotation ingest is supported.");
+    "Input file format. Currently only 'tif' is supported.");
+DEFINE_validator(format, &ValidateInputFileFormat);
 DEFINE_int64(x, 0, "The x-dim of the input file.");
 DEFINE_int64(y, 0, "The y-dim of the input file.");
 DEFINE_int64(z, 0, "The z-dim of the input file.");

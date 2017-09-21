@@ -1,7 +1,7 @@
 #ifndef BLOCK_H
 #define BLOCK_H
 
-#include "../DataArray/DataArray.h"
+#include <DataArray/DataArray.h>
 
 #include <memory>
 #include <string>
@@ -101,6 +101,7 @@ class Block {
     int _ydim;
     int _zdim;
     size_t _dtype_size;
+    std::string _encoding;
     bool _just_initialized = true;
     bool _data_loaded = false;
     bool _dirty = false;

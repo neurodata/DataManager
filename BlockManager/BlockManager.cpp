@@ -37,6 +37,11 @@ std::array<int, 3> BlockManager::getVoxelOffsetForScale(
                                 scale.voxel_offset[2]}});
 }
 
+std::string BlockManager::getEncodingForScale(const std::string& scale_key) {
+    const auto scale = manifest->get_scale(scale_key);
+    return scale.encoding;
+}
+
 std::vector<BlockKey> BlockManager::_blocksForBoundingBox(
     const std::array<int, 2>& xrng, const std::array<int, 2>& yrng,
     const std::array<int, 2>& zrng, const std::string& scale_key) {

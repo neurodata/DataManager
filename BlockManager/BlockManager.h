@@ -131,7 +131,7 @@ class BlockManager {
                 std::string block_path_name = block_path.string();
                 blockShPtr = std::make_shared<AnnoBlock32>(
                     block_path_name, chunk_size[0], chunk_size[1],
-                    chunk_size[2], sizeof(uint32_t));
+                    chunk_size[2], sizeof(uint32_t), getEncodingForScale(scale_key));
                 blockMortonIndexMap->insert(
                     std::make_pair(block_key, blockShPtr));
             } else {
@@ -154,6 +154,7 @@ class BlockManager {
 
     std::array<int, 3> getChunkSizeForScale(const std::string& scale_key);
     std::array<int, 3> getVoxelOffsetForScale(const std::string& scale_key);
+    std::string getEncodingForScale(const std::string& scale_key);
 
    protected:
     std::vector<BlockKey> _blocksForBoundingBox(const std::array<int, 2>& xrng,
