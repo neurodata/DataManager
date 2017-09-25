@@ -30,18 +30,14 @@ include_directories("${CMAKE_SOURCE_DIR}")
 include_directories("${CMAKE_BINARY_DIR}")
 include_directories("${CMAKE_SOURCE_DIR}/DataManager")
 
-#add_subdirectory(DataManager)
 add_subdirectory(BlockManager)
 add_subdirectory(DataArray)
 add_subdirectory(third_party/CompressedSegmentation)
 
-#set(DATA_MANAGER_LIBRARIES DataManager)
 set(BLOCK_MANAGER_LIBRARIES BlockManager)
 set(DATA_ARRAY_LIBRARIES DataArray)
 set(NG_COMPRESSED_SEG_LIBRARIES compress_segmentation)
 
 add_executable(ingest Ingest.cpp)
 
-target_link_libraries(ingest ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Folly_LIBRARIES} ${Boost_LIBRARIES})
-#target_link_libraries(ingest ${DATA_MANAGER_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Folly_LIBRARIES} ${Boost_LIBRARIES})
-
+target_link_libraries(ingest ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES})
