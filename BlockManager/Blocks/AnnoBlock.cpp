@@ -4,11 +4,15 @@
 #include <iterator>
 
 #include <boost/filesystem.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 #include <third_party/CompressedSegmentation/compress_segmentation.h>
 
 using namespace DataArray_namespace;
 using namespace BlockManager_namespace;
 namespace fs = boost::filesystem;
+namespace io = boost::iostreams;
 
 void AnnoBlock32::load() {
   // TODO(adb)
@@ -75,9 +79,14 @@ void AnnoBlock32::_saveCompressedSegmentation() {
 
   try {
     const auto filepath = fs::path(path_name);
-    fs::ofstream f(filepath, std::ofstream::binary);
-    f.write(reinterpret_cast<char *>(&output_vector[0]),
-            (output_vector.size() - 1) * sizeof(uint32_t));
+    io::filtering_ostream out;
+    if (_gzip) {
+      out.push(
+          io::gzip_compressor(io::gzip_params(io::gzip::default_compression)));
+    }
+    out.push(io::file_sink(filepath.string()));
+    out.write(reinterpret_cast<char *>(&output_vector[0]),
+              (output_vector.size() - 1) * sizeof(uint32_t));
   } catch (const fs::filesystem_error &ex) {
     LOG(FATAL) << "Error: Failed to write raw block to disk. " << ex.what();
   }

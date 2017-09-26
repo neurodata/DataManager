@@ -6,26 +6,26 @@
 
 #include <memory>
 
+#include <boost/filesystem.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <boost/filesystem.hpp>
 
 namespace fs = boost::filesystem;
 
-static bool ValidateInputFileFormat(const char* filename, const std::string& value) {
-    if (value == std::string("tif")) {
-        return true;
-    }
-    return false;
+static bool ValidateInputFileFormat(const char *filename,
+                                    const std::string &value) {
+  if (value == std::string("tif")) {
+    return true;
+  }
+  return false;
 }
 
 DEFINE_string(ingestdir, "",
               "Path to the ingest directory containing a Neuroglancer JSON "
               "Manifest for this ingest job.");
 DEFINE_string(input, "", "Path to the input file to ingest.");
-DEFINE_string(
-    format, "tif",
-    "Input file format. Currently only 'tif' is supported.");
+DEFINE_string(format, "tif",
+              "Input file format. Currently only 'tif' is supported.");
 DEFINE_validator(format, &ValidateInputFileFormat);
 DEFINE_int64(x, 0, "The x-dim of the input file.");
 DEFINE_int64(y, 0, "The y-dim of the input file.");
@@ -42,53 +42,53 @@ DEFINE_bool(subtractVoxelOffset, false,
             "offset of the dataset (e.g. are 0-indexed with respect to the "
             "data on disk). If true, the voxel offset is subtracted from the "
             "cutout arguments in a pre-processing step.");
+DEFINE_bool(gzip, false, "Compress output using gzip.");
 
-int main(int argc, char* argv[]) {
-    google::InstallFailureSignalHandler();
+int main(int argc, char *argv[]) {
+  google::InstallFailureSignalHandler();
 
-    google::InitGoogleLogging(argv[0]);
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-    if (FLAGS_exampleManifest) {
-        const auto exampleManifest =
-            BlockManager_namespace::Manifest::MakeExampleManifest();
-        exampleManifest->Write("manifest.ex.json");
-        LOG(INFO) << "I have " << exampleManifest->num_scales() << " scales.";
-        return EXIT_SUCCESS;
-    }
-
-    const auto path = fs::path(FLAGS_ingestdir);
-    CHECK(fs::is_directory(path)) << "Error: Ingest directory '"
-                                  << FLAGS_ingestdir << "' does not exist.";
-
-    LOG(INFO) << "Using ingest directory " << FLAGS_ingestdir;
-    const auto manifest_path = path / fs::path("info");
-    CHECK(fs::is_regular_file(manifest_path));
-
-    auto manifestShPtr = std::make_shared<BlockManager_namespace::Manifest>(
-        BlockManager_namespace::Manifest(manifest_path.string()));
-
-    BlockManager_namespace::BlockManager BLM(path.string(), manifestShPtr);
-
-    // Open the file to ingest
-    if (FLAGS_format == "tif") {
-        auto im_array =
-            DataArray_namespace::TiffArray32(FLAGS_x, FLAGS_y, FLAGS_z);
-        im_array.load(FLAGS_input);
-
-        auto xrng =
-            std::array<int, 2>({{static_cast<int>(FLAGS_xoffset),
-                                 static_cast<int>(FLAGS_x + FLAGS_xoffset)}});
-        auto yrng =
-            std::array<int, 2>({{static_cast<int>(FLAGS_yoffset),
-                                 static_cast<int>(FLAGS_y + FLAGS_yoffset)}});
-        auto zrng =
-            std::array<int, 2>({{static_cast<int>(FLAGS_zoffset),
-                                 static_cast<int>(FLAGS_z + FLAGS_zoffset)}});
-
-        BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale,
-                FLAGS_subtractVoxelOffset);
-    }
-
+  if (FLAGS_exampleManifest) {
+    const auto exampleManifest =
+        BlockManager_namespace::Manifest::MakeExampleManifest();
+    exampleManifest->Write("manifest.ex.json");
+    LOG(INFO) << "I have " << exampleManifest->num_scales() << " scales.";
     return EXIT_SUCCESS;
+  }
+
+  const auto path = fs::path(FLAGS_ingestdir);
+  CHECK(fs::is_directory(path))
+      << "Error: Ingest directory '" << FLAGS_ingestdir << "' does not exist.";
+
+  LOG(INFO) << "Using ingest directory " << FLAGS_ingestdir;
+  const auto manifest_path = path / fs::path("info");
+  CHECK(fs::is_regular_file(manifest_path));
+
+  auto manifestShPtr = std::make_shared<BlockManager_namespace::Manifest>(
+      BlockManager_namespace::Manifest(manifest_path.string()));
+
+  BlockManager_namespace::BlockManager BLM(path.string(), manifestShPtr,
+                                           FLAGS_gzip);
+
+  // Open the file to ingest
+  if (FLAGS_format == "tif") {
+    auto im_array = DataArray_namespace::TiffArray32(FLAGS_x, FLAGS_y, FLAGS_z);
+    im_array.load(FLAGS_input);
+
+    auto xrng =
+        std::array<int, 2>({{static_cast<int>(FLAGS_xoffset),
+                             static_cast<int>(FLAGS_x + FLAGS_xoffset)}});
+    auto yrng =
+        std::array<int, 2>({{static_cast<int>(FLAGS_yoffset),
+                             static_cast<int>(FLAGS_y + FLAGS_yoffset)}});
+    auto zrng =
+        std::array<int, 2>({{static_cast<int>(FLAGS_zoffset),
+                             static_cast<int>(FLAGS_z + FLAGS_zoffset)}});
+
+    BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
+  }
+
+  return EXIT_SUCCESS;
 }

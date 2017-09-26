@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 find_package(Glog REQUIRED)
 find_package(gflags REQUIRED)
 find_package(Folly REQUIRED)
-find_package(Boost COMPONENTS filesystem system REQUIRED QUIET )
+find_package(Boost COMPONENTS filesystem system iostreams REQUIRED QUIET )
 
 include_directories(${Folly_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIR})
