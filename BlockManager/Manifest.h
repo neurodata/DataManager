@@ -77,6 +77,7 @@ class Manifest {
         }
         // TODO(adb): throw exception
         CHECK(false) << "Error: Failed to find scale with key " << key;
+        return Scale();
     }
     std::string mesh() const { return _mesh; }
 

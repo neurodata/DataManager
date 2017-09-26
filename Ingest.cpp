@@ -47,48 +47,50 @@ DEFINE_bool(gzip, false, "Compress output using gzip.");
 int main(int argc, char *argv[]) {
   google::InstallFailureSignalHandler();
 
-  google::InitGoogleLogging(argv[0]);
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
+    google::InitGoogleLogging(argv[0]);
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (FLAGS_exampleManifest) {
-    const auto exampleManifest =
-        BlockManager_namespace::Manifest::MakeExampleManifest();
-    exampleManifest->Write("manifest.ex.json");
-    LOG(INFO) << "I have " << exampleManifest->num_scales() << " scales.";
-    return EXIT_SUCCESS;
-  }
+    if (FLAGS_exampleManifest) {
+        const auto exampleManifest =
+            BlockManager_namespace::Manifest::MakeExampleManifest();
+        exampleManifest->Write("manifest.ex.json");
+        LOG(INFO) << "I have " << exampleManifest->num_scales() << " scales.";
+        return EXIT_SUCCESS;
+    }
 
-  const auto path = fs::path(FLAGS_ingestdir);
-  CHECK(fs::is_directory(path))
-      << "Error: Ingest directory '" << FLAGS_ingestdir << "' does not exist.";
+    const auto path = fs::path(FLAGS_ingestdir);
+    CHECK(fs::is_directory(path)) << "Error: Ingest directory '"
+                                  << FLAGS_ingestdir << "' does not exist.";
 
-  LOG(INFO) << "Using ingest directory " << FLAGS_ingestdir;
-  const auto manifest_path = path / fs::path("info");
-  CHECK(fs::is_regular_file(manifest_path));
+    LOG(INFO) << "Using ingest directory " << FLAGS_ingestdir;
+    const auto manifest_path = path / fs::path("info");
+    CHECK(fs::is_regular_file(manifest_path));
 
-  auto manifestShPtr = std::make_shared<BlockManager_namespace::Manifest>(
-      BlockManager_namespace::Manifest(manifest_path.string()));
+    auto manifestShPtr = std::make_shared<BlockManager_namespace::Manifest>(
+        BlockManager_namespace::Manifest(manifest_path.string()));
 
-  BlockManager_namespace::BlockManager BLM(path.string(), manifestShPtr,
-                                           FLAGS_gzip);
+    BlockManager_namespace::BlockSettings settings({FLAGS_gzip});
+    BlockManager_namespace::BlockManager BLM(path.string(), manifestShPtr, BlockManager_namespace::BlockDataStore::FILESYSTEM, settings);
 
-  // Open the file to ingest
-  if (FLAGS_format == "tif") {
-    auto im_array = DataArray_namespace::TiffArray32(FLAGS_x, FLAGS_y, FLAGS_z);
-    im_array.load(FLAGS_input);
+    // Open the file to ingest
+    if (FLAGS_format == "tif") {
+        auto im_array =
+            DataArray_namespace::TiffArray32(FLAGS_x, FLAGS_y, FLAGS_z);
+        im_array.load(FLAGS_input);
 
-    auto xrng =
-        std::array<int, 2>({{static_cast<int>(FLAGS_xoffset),
-                             static_cast<int>(FLAGS_x + FLAGS_xoffset)}});
-    auto yrng =
-        std::array<int, 2>({{static_cast<int>(FLAGS_yoffset),
-                             static_cast<int>(FLAGS_y + FLAGS_yoffset)}});
-    auto zrng =
-        std::array<int, 2>({{static_cast<int>(FLAGS_zoffset),
-                             static_cast<int>(FLAGS_z + FLAGS_zoffset)}});
+        auto xrng =
+            std::array<int, 2>({{static_cast<int>(FLAGS_xoffset),
+                                 static_cast<int>(FLAGS_x + FLAGS_xoffset)}});
+        auto yrng =
+            std::array<int, 2>({{static_cast<int>(FLAGS_yoffset),
+                                 static_cast<int>(FLAGS_y + FLAGS_yoffset)}});
+        auto zrng =
+            std::array<int, 2>({{static_cast<int>(FLAGS_zoffset),
+                                 static_cast<int>(FLAGS_z + FLAGS_zoffset)}});
 
-    BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
-  }
+        BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale,
+                FLAGS_subtractVoxelOffset);
+    }
 
   return EXIT_SUCCESS;
 }
