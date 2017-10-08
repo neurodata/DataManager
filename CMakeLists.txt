@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
 project (DataManager)
 set (DataManager_VERSION_MAJOR 0)
-set (DataManager_VERSION_MINOR 0)
+set (DataManager_VERSION_MINOR 2)
 string(TIMESTAMP DataManager_VERSION_BUILDDATE "%Y%m%d")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
@@ -38,6 +38,6 @@ set(BLOCK_MANAGER_LIBRARIES BlockManager)
 set(DATA_ARRAY_LIBRARIES DataArray)
 set(NG_COMPRESSED_SEG_LIBRARIES compress_segmentation)
 
-add_executable(ingest Ingest.cpp)
+add_executable(ndm NeuroDataManager.cpp)
 
-target_link_libraries(ingest ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES})
+target_link_libraries(ndm ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES})
