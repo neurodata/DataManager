@@ -47,7 +47,6 @@ class Block {
     void add(const typename DataArray_namespace::DataArray3D<T>::array_view &view, int x_arr_offset, int y_arr_offset,
              int z_arr_offset, bool overwrite = false) {
         if (!_data_loaded) {
-            LOG(INFO) << "Loading block data.";
             load();
         }
         DataArray_namespace::DataArray3D<T> local_arr(_data, _xdim, _ydim, _zdim);
@@ -69,6 +68,27 @@ class Block {
         local_arr.copy(_data, _xdim, _ydim, _zdim);
         _dirty = true;
         _flush();  // flush on write for now
+    }
+
+    template <typename T>
+    void get(typename DataArray_namespace::DataArray3D<T>::array_view &view, int x_arr_offset, int y_arr_offset,
+             int z_arr_offset) {
+        if (!_data_loaded) {
+            load();
+        }
+        DataArray_namespace::DataArray3D<T> local_arr(_data, _xdim, _ydim, _zdim);
+
+        typedef typename DataArray_namespace::DataArray3D<T>::index index;
+        const auto num_dims = view.dimensionality;
+        CHECK(num_dims == 3);
+
+        for (size_t x = 0, local_x = x_arr_offset; x < view.shape()[0]; x++, local_x++) {
+            for (size_t y = 0, local_y = y_arr_offset; y < view.shape()[1]; y++, local_y++) {
+                for (size_t z = 0, local_z = z_arr_offset; z < view.shape()[2]; z++, local_z++) {
+                    view[index(x)][index(y)][index(z)] += local_arr(local_x, local_y, local_z);
+                }
+            }
+        }
     }
 
     // Zero block memory and set _data_loaded and _dirty to true

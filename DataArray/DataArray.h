@@ -60,6 +60,7 @@ class DataArray3D : public DataArray {
     }
 
     virtual void load(const std::string& filename) {}
+    virtual void save(const std::string& filename) {}
 
    protected:
     std::shared_ptr<array_type> M;
