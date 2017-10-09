@@ -34,6 +34,11 @@ add_subdirectory(BlockManager)
 add_subdirectory(DataArray)
 add_subdirectory(third_party/CompressedSegmentation)
 
+if(ENABLE_TESTS) 
+enable_testing()
+add_subdirectory(tests)
+endif(ENABLE_TESTS)
+
 set(BLOCK_MANAGER_LIBRARIES BlockManager)
 set(DATA_ARRAY_LIBRARIES DataArray)
 set(NG_COMPRESSED_SEG_LIBRARIES compress_segmentation)

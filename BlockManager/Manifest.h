@@ -52,9 +52,7 @@ struct Scale {
 
 class Manifest {
    public:
-    Manifest(const std::string& manifest_path_name) {
-        Read(manifest_path_name);
-    }
+    Manifest(const std::string& manifest_path_name) { Read(manifest_path_name); }
     Manifest() {}
     ~Manifest() {}
 
@@ -86,8 +84,8 @@ class Manifest {
     void set_type(const std::string& type) { _type = type; }
     void set_data_type(const std::string& data_type) { _data_type = data_type; }
     void set_num_channels(int num_channels) { _num_channels = num_channels; }
-    // TODO(adb): set scales
     void set_mesh(const std::string& mesh) { _mesh = mesh; }
+    void add_scale(const Scale& scale) { _scales.push_back(scale); }
 
    private:
     /* One of "image" or "segmentation", specifying the type of the volume. */

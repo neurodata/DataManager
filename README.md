@@ -12,6 +12,7 @@ The following dependencies are required:
 * boost
 * folly
 * google-glog
+* gtest/gmock (for tests)
 * gflags
 For specific tips/instructions for obtaining dependencies on different platforms, scroll past the build instructions below.
 
@@ -28,8 +29,17 @@ Developers will want to enable debugging:
 ```
 cmake -DCMAKE_BUILD_TYPE=debug .. 
 ```
+
+To eanble tests, run
+```
+cmake -DCMAKE_BUILD_TYPE=debug -DENABLE_TESTS=on ..
+```
+
 3. Run `make` to build the binaries.
 4. Assuming `make` ran successfully, binaries will be available in the `bin` directory.
+5. If tests were built, runing `make test` will run the unit tests. For verbose output, each test case has an individual executable in the `testbin` directory.
+
+\* Note that the unit tests will create, populate (and remove) a temporary directory in the `/tmp` directory for reading and writing data to during testing. For this reason, at present we recommend running tests on a unix-based system.
 
 #### Arch Linux
 
