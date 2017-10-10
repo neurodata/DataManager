@@ -21,6 +21,12 @@ if(USE_STATIC_LIBS)
     endif()
 endif()
 
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
 find_package(Glog REQUIRED)
 if(USE_STATIC_LIBS)
     list(APPEND Glog_LIBRARIES lzma)
@@ -74,7 +80,9 @@ include_directories("${CMAKE_SOURCE_DIR}/DataManager")
 
 add_subdirectory(BlockManager)
 add_subdirectory(DataArray)
+add_subdirectory(Mesh)
 add_subdirectory(third_party/CompressedSegmentation)
+add_subdirectory(third_party/NeuroglancerMesh)
 add_subdirectory(Skeleton)
 
 if(ENABLE_TESTS) 
@@ -84,12 +92,17 @@ endif(ENABLE_TESTS)
 
 set(BLOCK_MANAGER_LIBRARIES BlockManager)
 set(DATA_ARRAY_LIBRARIES DataArray)
+set(MESH_LIBRARIES MeshLib)
 
 add_executable(ndm NeuroDataManager.cpp)
-
 target_link_libraries(ndm ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES} ${Gflags_LIBRARIES} ${Glog_LIBRARIES} ${ZLIB_LIBRARIES} ${TIFF_LIBRARIES})
 
 set(SKELETON_LIBRARIES Skeleton)
 
 add_executable(skeleton Skeleton.cpp)
 target_link_libraries(skeleton ${SKELETON_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES} ${ZLIB_LIBRARIES})
+
+set(MESH_LIBRARIES Mesh)
+
+add_executable(mesh Mesh.cpp)
+target_link_libraries(mesh ${MESH_LIBRARIES} ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES})

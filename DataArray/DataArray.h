@@ -82,6 +82,8 @@ class DataArray {
         std::memcpy(data.get(), M->origin(), xdim * ydim * zdim * sizeof(T));
     }
 
+    T* origin() { return M->origin(); }
+
     virtual void load(const std::string& filename) {}
     virtual void save(const std::string& filename) {}
 
