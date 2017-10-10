@@ -52,7 +52,9 @@ void Block::_flush() {
     if (is_dirty()) {
         save();
     }
-    _data.reset();
+    // TODO(adb): flushing and then loading again will cause a seg fault, since we only alloc on creation. So, zero the
+    // block instead. If we start to run out of memory we will just delete block objects.
+    zero_block();
     _data_loaded = false;
     _dirty = false;
 }
