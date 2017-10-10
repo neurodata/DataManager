@@ -167,6 +167,24 @@ TEST_F(BlockManagerTest, UnalignedOffset) {
     check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
 }
 
+TEST_F(BlockManagerTest, LastCorner) {
+    int xsize = 200;
+    int ysize = 200;
+    int zsize = 18;
+    const auto testArr = make_test_array(xsize, ysize, zsize, 5);
+    const auto xrng = std::array<int, 2>({824, 1024});
+    const auto yrng = std::array<int, 2>({825, 1025});
+    const auto zrng = std::array<int, 2>({46, 64});
+    const auto scale_key = std::string("0");
+    BLMShPtr->Put(*testArr, xrng, yrng, zrng, scale_key, /*subtractVoxelOffset=*/true);
+
+    const auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+
+    BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key, /*subtractVoxelOffset=*/true);
+    check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
+}
+
+// TODO(adb): Move to a block/file format test case
 class BlockManagerTestGzip : public ::testing::Test {
    protected:
     BlockManagerTestGzip() {
@@ -186,7 +204,7 @@ TEST_F(BlockManagerTestGzip, AlignedGzip) {
     int xsize = 128;
     int ysize = 128;
     int zsize = 16;
-    const auto testArr = make_test_array(xsize, ysize, zsize, 5);
+    const auto testArr = make_test_array(xsize, ysize, zsize, 6);
     const auto xrng = std::array<int, 2>({0, 128});
     const auto yrng = std::array<int, 2>({0, 128});
     const auto zrng = std::array<int, 2>({0, 16});
