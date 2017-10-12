@@ -74,6 +74,7 @@ include_directories("${CMAKE_SOURCE_DIR}/DataManager")
 add_subdirectory(BlockManager)
 add_subdirectory(DataArray)
 add_subdirectory(third_party/CompressedSegmentation)
+add_subdirectory(Skeleton)
 
 if(ENABLE_TESTS) 
     enable_testing()
@@ -86,3 +87,8 @@ set(DATA_ARRAY_LIBRARIES DataArray)
 add_executable(ndm NeuroDataManager.cpp)
 
 target_link_libraries(ndm ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES} ${Gflags_LIBRARIES} ${Glog_LIBRARIES} ${ZLIB_LIBRARIES} ${TIFF_LIBRARIES})
+
+set(SKELETON_LIBRARIES Skeleton)
+
+add_executable(skeleton Skeleton.cpp)
+target_link_libraries(skeleton ${SKELETON_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES})
