@@ -7,7 +7,7 @@ string(TIMESTAMP DataManager_VERSION_BUILDDATE "%Y%m%d")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 find_package(Glog REQUIRED)
-find_package(gflags REQUIRED)
+find_package(Gflags REQUIRED)
 find_package(Folly REQUIRED)
 find_package(Boost COMPONENTS filesystem system iostreams REQUIRED QUIET )
 
