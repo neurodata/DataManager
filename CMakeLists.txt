@@ -6,10 +6,43 @@ string(TIMESTAMP DataManager_VERSION_BUILDDATE "%Y%m%d")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
+option(USE_STATIC_LIBS "Link against static libraries.")
+if(USE_STATIC_LIBS) 
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    
+    set(Glog_USE_STATIC_LIBS ON)
+    set(Gflags_USE_STATIC_LIBS ON)
+    set(Boost_USE_STATIC_LIBS ON)
+    set(Folly_USE_STATIC_LIBS ON)
+    
+    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+        #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+    endif()
+endif()
+
 find_package(Glog REQUIRED)
+if(USE_STATIC_LIBS)
+    list(APPEND Glog_LIBRARIES lzma)
+endif()
+
 find_package(Gflags REQUIRED)
+find_package(ZLIB REQUIRED)
+
+find_package(TIFF REQUIRED) 
+if(USE_STATIC_LIBS AND ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    list(APPEND TIFF_LIBRARIES jbig jpeg)
+endif()
+
 find_package(Folly REQUIRED)
-find_package(Boost COMPONENTS filesystem system iostreams REQUIRED QUIET )
+if(USE_STATIC_LIBS AND ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    list(APPEND Folly_LIBRARIES iberty)
+endif()
+
+find_package(Boost COMPONENTS filesystem system iostreams REQUIRED)
+if(USE_STATIC_LIBS AND ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    list(APPEND Boost_LIBRARIES rt)
+    list(INSERT Boost_LIBRARIES 0 pthread)
+endif()
 
 include_directories(${Folly_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIR})
@@ -35,14 +68,13 @@ add_subdirectory(DataArray)
 add_subdirectory(third_party/CompressedSegmentation)
 
 if(ENABLE_TESTS) 
-enable_testing()
-add_subdirectory(tests)
+    enable_testing()
+    add_subdirectory(tests)
 endif(ENABLE_TESTS)
 
 set(BLOCK_MANAGER_LIBRARIES BlockManager)
 set(DATA_ARRAY_LIBRARIES DataArray)
-set(NG_COMPRESSED_SEG_LIBRARIES compress_segmentation)
 
 add_executable(ndm NeuroDataManager.cpp)
 
-target_link_libraries(ndm ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES})
+target_link_libraries(ndm ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES} ${Gflags_LIBRARIES} ${Glog_LIBRARIES} ${ZLIB_LIBRARIES} ${TIFF_LIBRARIES})
