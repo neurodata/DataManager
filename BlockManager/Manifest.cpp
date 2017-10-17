@@ -20,6 +20,7 @@
 
 #include <glog/logging.h>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 using namespace BlockManager_namespace;
 namespace fs = boost::filesystem;
