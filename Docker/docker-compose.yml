@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  web-annos:
+    build: web_gzip/
+    ports:
+      - "8081:80"
+    volumes:
+      - precomputeddata:/usr/share/nginx/html/
+
+  web-em: 
+    build: web/
+    ports: 
+      - "8082:80"
+    volumes:
+      - precomputeddata:/usr/share/nginx/html/
+
+  ndviz:
+    image: "neurodata/ndviz"
+    ports:
+      - "8080:8080"
+
+volumes:
+  precomputeddata:
+    external: true
