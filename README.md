@@ -6,14 +6,20 @@ A collection of programs for spatial access to large data volumes.
 
 Both a reference guide and example usage are available in the `docs` directory. Additional documentation is also available for specific features or concepts (e.g. `Coordinates`) -- check the `docs` directory after each release for the latest documentation.
 
+## Dockerfiles
+
+A public Dockerfile is available on [Docker hub](https://hub.docker.com/r/neurodata/ndm/).
+
 ## Building
 
-The following dependencies are required:
+The following dependencies are required:)
 * boost
 * folly
 * google-glog
 * gtest/gmock (for tests)
 * gflags
+* libtiff
+
 For specific tips/instructions for obtaining dependencies on different platforms, scroll past the build instructions below.
 
 1. Create a `build` directory in the repository root.
@@ -41,6 +47,10 @@ cmake -DCMAKE_BUILD_TYPE=debug -DENABLE_TESTS=on ..
 
 \* Note that the unit tests will create, populate (and remove) a temporary directory in the `/tmp` directory for reading and writing data to during testing. For this reason, at present we recommend running tests on a unix-based system.
 
+#### Ubuntu Linux
+
+The `ndm` Docker containers are built on Ubuntu 16.04. Build instructions for Ubuntu can be found in Dockerfile for the `ndm:deps` container (`Docker/ndm_deps/Dockerfile`). 
+
 #### Arch Linux
 
 The `folly` package in AUR is typically a bit out of date. So, we recommend installing from source. The following instructions should get you started (and will also install many of the dependencies required above).
@@ -62,3 +72,8 @@ pacman -Syu \
 5. `./configure LDFLAGS=-lunwind CC=gcc CXX=g++`
 6. `make -j $(nproc)`
 7. `sudo make install`
+
+#### Static Build
+
+A static `NeuroDataManager` build is also enable. Add `D_USE_STATIC_LIBS=on` to the cmake command line arguments. Note that `libjpeg` and `libjbig` are still required. See the main `ndm` Dockerfile (`Dockerfile`) for a complete example.
+
