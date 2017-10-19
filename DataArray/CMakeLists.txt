@@ -7,6 +7,12 @@ set(DATA_ARRAY_INCLUDE_DIRS ${Glog_INCLUDE_DIR} ${Boost_INCLUDE_DIRS} ${TIFF_INC
 
 set(DATA_ARRAY_SOURCES TiffArray.cpp)
 
+if(BLOSC_FOUND)
+    list(APPEND DATA_ARRAY_SOURCES BloscArray.cpp)
+    list(APPEND DATA_ARRAY_INCLUDE_DIRS "${BLOSC_INCLUDE_DIRS}")
+    list(APPEND DATA_ARRAY_LIBS "${BLOSC_LIBRARIES}")
+endif()
+
 add_library(DataArray ${DATA_ARRAY_SOURCES})
 
 target_include_directories(DataArray PRIVATE ${DATA_ARRAY_INCLUDE_DIRS})

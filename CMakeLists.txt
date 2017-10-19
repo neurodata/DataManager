@@ -47,6 +47,13 @@ endif()
 include_directories(${Folly_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIR})
 
+find_package(BLOSC)
+if(BLOSC_FOUND)
+    add_definitions("-DHAVE_BLOSC")
+else()
+    message(STATUS "Failed to find Blosc compression library. Reading Blosc formatted files will not be supported.")
+endif()
+
 configure_file (
     "${CMAKE_SOURCE_DIR}/NeuroDataManager.h.in"
     "${CMAKE_BINARY_DIR}/NeuroDataManager.h"

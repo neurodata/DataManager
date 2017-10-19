@@ -18,6 +18,9 @@
 #include "BlockManager/BlockManager.h"
 #include "BlockManager/Manifest.h"
 #include "DataArray/TiffArray.h"
+#ifdef HAVE_BLOSC
+#include "DataArray/BloscArray.h"
+#endif
 
 #include <iostream>
 #include <memory>
@@ -32,6 +35,11 @@ static bool ValidateInputFileFormat(const char *filename, const std::string &val
     if (value == std::string("tif")) {
         return true;
     }
+#ifdef HAVE_BLOSC
+    else if (value == std::string("blosc")) {
+        return true;
+    }
+#endif
     return false;
 }
 
@@ -40,7 +48,13 @@ DEFINE_string(datadir, "",
               "Manifest.");
 DEFINE_string(input, "", "Path to the input file (for ingest).");
 DEFINE_string(output, "", "Path to the output file (for cutout).");
-DEFINE_string(format, "tif", "Input/output file format. Currently only 'tif' is supported.");
+DEFINE_string(
+    format, "tif",
+#ifdef HAVE_BLOSC
+    "Input/output file format. 'tif' is supported for both input/output. 'blosc' is supported for input only.");
+#else
+    "Input/output file format. Currently only 'tif' is supported.");
+#endif
 DEFINE_validator(format, &ValidateInputFileFormat);
 DEFINE_int64(x, 0, "The x-dim of the input/output file.");
 DEFINE_int64(y, 0, "The y-dim of the input/output file.");
@@ -98,6 +112,14 @@ int main(int argc, char *argv[]) {
 
             BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
         }
+#ifdef HAVE_BLOSC
+        else if (FLAGS_format == "blosc") {
+            auto im_array = DataArray_namespace::BloscArray32(FLAGS_x, FLAGS_y, FLAGS_z);
+            im_array.load(FLAGS_input);
+
+            BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
+        }
+#endif
     } else if (FLAGS_output.size() > 0) {
         // cutout
         if (FLAGS_format == "tif") {
