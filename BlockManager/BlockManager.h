@@ -43,6 +43,11 @@ struct BlockKey {
     bool operator<(const BlockKey& other) const { return (morton_index < other.morton_index); }
 };
 
+struct BlockInfo {
+    BlockKey key;
+    std::array<int, 3> block_size;
+};
+
 typedef std::map<BlockKey, std::shared_ptr<Block>> BlockMortonIndexMap;
 
 class BlockManager {
@@ -51,94 +56,77 @@ class BlockManager {
                  const BlockDataStore blockDataStore, const BlockSettings& settings);
     ~BlockManager();
 
+    /**
+     * Put takes as input a 3D matrix containing input data and the cutout region corresponding to the data's location
+     * in the dataspace. The cutout region is specified as a bounding box in 3D space, and can either be in 0-indexed
+     * coordinates or the coordinates of the data space. If subtractVoxelOffset is true, the cutout is in the
+     * coordinates of the dataspace and we need to subtract the voxel offset from the cutout. Note that while block keys
+     * typically use voxel coordinates, block data is stored using image coordinates after being read from the
+     * datasource.
+     */
     template <typename T>
     void Put(const DataArray_namespace::DataArray3D<T>& data, const std::array<int, 2>& xrng,
              const std::array<int, 2>& yrng, const std::array<int, 2>& zrng, const std::string& scale_key,
              bool subtractVoxelOffset = false) {
-        std::array<int, 2> _xrng = xrng;
-        std::array<int, 2> _yrng = yrng;
-        std::array<int, 2> _zrng = zrng;
+        auto cutout_start = std::array<int, 3>({xrng[0], yrng[0], zrng[0]});
+        auto cutout_end = std::array<int, 3>({xrng[1], yrng[1], zrng[1]});
 
         const auto voxel_offset = getVoxelOffsetForScale(scale_key);
+        auto cutout_start_abs = cutout_start;
+        auto cutout_end_abs = cutout_end;
         if (subtractVoxelOffset) {
-            _xrng[0] -= voxel_offset[0];
-            _xrng[1] -= voxel_offset[0];
-
-            _yrng[0] -= voxel_offset[1];
-            _yrng[1] -= voxel_offset[1];
-
-            _zrng[0] -= voxel_offset[2];
-            _zrng[1] -= voxel_offset[2];
+            for (int i = 0; i < 3; i++) {
+                cutout_start_abs[i] -= voxel_offset[i];
+                cutout_end_abs[i] -= voxel_offset[i];
+            }
         }
+        const auto image_size = getSizeForScale(scale_key);
         const auto chunk_size = getChunkSizeForScale(scale_key);
         const auto block_encoding = getEncodingForScale(scale_key);
 
-        auto block_keys = _blocksForBoundingBox(_xrng, _yrng, _zrng, scale_key);
+        auto block_keys =
+            _blocksForBoundingBox(std::array<int, 2>({cutout_start_abs[0], cutout_end_abs[0]}),
+                                  std::array<int, 2>({cutout_start_abs[1], cutout_end_abs[1]}),
+                                  std::array<int, 2>({cutout_start_abs[2], cutout_end_abs[2]}), scale_key);
+
         auto blockMortonIndexMapItr = block_index_by_res.find(scale_key);
         CHECK(blockMortonIndexMapItr != block_index_by_res.end())
             << "Failed to find scale key " << scale_key << " in block map.";
         auto blockMortonIndexMap = blockMortonIndexMapItr->second;
         for (const auto& block_key : block_keys) {
-            // Translate the block_key to voxel space coordinates
-            std::array<int, 2> _x({{(block_key.x * chunk_size[0]), ((block_key.x + 1) * chunk_size[0])}});
-            std::array<int, 2> _y({{(block_key.y * chunk_size[1]), ((block_key.y + 1) * chunk_size[1])}});
-            std::array<int, 2> _z({{(block_key.z * chunk_size[2]), ((block_key.z + 1) * chunk_size[2])}});
+            // Note that the block key is expected to be 0-indexed (in image space)
+            auto block_start = BlockManager::BlockStart(block_key, chunk_size);
+            auto block_end = BlockManager::BlockEnd(block_key, chunk_size, image_size);
+            auto block_size = BlockManager::BlockSizeFromExtents(block_start, block_end);
 
-            // Make sure the view matches the dimensionality of the input data
-            int x_arr_offset = 0;
-            int y_arr_offset = 0;
-            int z_arr_offset = 0;
-            if (_x[0] < _xrng[0]) {
-                x_arr_offset = _xrng[0] - _x[0];
-                _x[0] = _xrng[0];
-            }
-            if (_x[1] > _xrng[1]) {
-                _x[1] = _xrng[1];
-            }
-            if (_y[0] < _yrng[0]) {
-                y_arr_offset = _yrng[0] - _y[0];
-                _y[0] = _yrng[0];
-            }
-            if (_y[1] > _yrng[1]) {
-                _y[1] = _yrng[1];
-            }
-            if (_z[0] < _zrng[0]) {
-                z_arr_offset = _zrng[0] - _z[0];
-                _z[0] = _zrng[0];
-            }
-            if (_z[1] > _zrng[1]) {
-                _z[1] = _zrng[1];
-            }
+            // Get the portion of the cutout that lives within this block
+            const auto block_restricted_cutout =
+                BlockManager::GetDataView(block_start, block_end, cutout_start_abs, cutout_end_abs);
 
-            // Scale by the offset of the input dataset
-            std::array<int, 2> _xview = _x;
-            std::array<int, 2> _yview = _y;
-            std::array<int, 2> _zview = _z;
+            // Subtract off the cutout starting coordinates (in image space) for the input data view
+            auto xview = std::array<int, 2>({block_restricted_cutout.first[0] - cutout_start_abs[0],
+                                             block_restricted_cutout.second[0] - cutout_start_abs[0]});
+            auto yview = std::array<int, 2>({block_restricted_cutout.first[1] - cutout_start_abs[1],
+                                             block_restricted_cutout.second[1] - cutout_start_abs[1]});
+            auto zview = std::array<int, 2>({block_restricted_cutout.first[2] - cutout_start_abs[2],
+                                             block_restricted_cutout.second[2] - cutout_start_abs[2]});
 
-            _xview[0] -= _xrng[0];
-            _xview[1] -= _xrng[0];
-            _yview[0] -= _yrng[0];
-            _yview[1] -= _yrng[0];
-            _zview[0] -= _zrng[0];
-            _zview[1] -= _zrng[0];
-
-            const auto arr_view = data.view(_xview, _yview, _zview);
+            const auto input_data_view = data.view(xview, yview, zview);
 
             auto itr = blockMortonIndexMap->find(block_key);
             std::shared_ptr<Block> blockShPtr;
             if (itr == blockMortonIndexMap->end()) {
                 // Create a new block and add it to the map
-                std::string block_name = Block::SetNeuroglancerFileName(
-                    static_cast<int>(block_key.x * chunk_size[0]), static_cast<int>((block_key.x + 1) * chunk_size[0]),
-                    static_cast<int>(block_key.y * chunk_size[1]), static_cast<int>((block_key.y + 1) * chunk_size[1]),
-                    static_cast<int>(block_key.z * chunk_size[2]), static_cast<int>((block_key.z + 1) * chunk_size[2]),
-                    voxel_offset);
+                std::string block_name =
+                    Block::SetNeuroglancerFileName(block_start[0], block_end[0], block_start[1], block_end[1],
+                                                   block_start[2], block_end[2], voxel_offset);
+
                 const auto block_path = fs::path(directory_path_name) / fs::path(scale_key) / fs::path(block_name);
                 std::string block_path_name = block_path.string();
                 switch (_blockDataStore) {
                     case BlockDataStore::FILESYSTEM: {
-                        blockShPtr = std::make_shared<FilesystemBlock>(block_path_name, chunk_size[0], chunk_size[1],
-                                                                       chunk_size[2], sizeof(uint32_t), block_encoding,
+                        blockShPtr = std::make_shared<FilesystemBlock>(block_path_name, block_size[0], block_size[1],
+                                                                       block_size[2], sizeof(uint32_t), block_encoding,
                                                                        _blockDataType, _blockSettingsPtr);
                     } break;
                     default: { LOG(FATAL) << "Unknown backing datastore."; }
@@ -153,7 +141,13 @@ class BlockManager {
                     default: { LOG(FATAL) << "Unkown backing datastore."; }
                 }
             }
-            blockShPtr->add<uint32_t>(arr_view, x_arr_offset, y_arr_offset, z_arr_offset);
+
+            // Offset if the cutout starts somewhere in the middle of the block
+            int x_block_offset = block_restricted_cutout.first[0] - block_start[0];
+            int y_block_offset = block_restricted_cutout.first[1] - block_start[1];
+            int z_block_offset = block_restricted_cutout.first[2] - block_start[2];
+
+            blockShPtr->add<uint32_t>(input_data_view, x_block_offset, y_block_offset, z_block_offset);
         }
         return;
     }
@@ -161,80 +155,59 @@ class BlockManager {
     template <typename T>
     void Get(DataArray_namespace::DataArray3D<T> output, const std::array<int, 2>& xrng, const std::array<int, 2>& yrng,
              const std::array<int, 2>& zrng, const std::string& scale_key, bool subtractVoxelOffset = false) {
-        std::array<int, 2> _xrng = xrng;
-        std::array<int, 2> _yrng = yrng;
-        std::array<int, 2> _zrng = zrng;
+        auto cutout_start = std::array<int, 3>({xrng[0], yrng[0], zrng[0]});
+        auto cutout_end = std::array<int, 3>({xrng[1], yrng[1], zrng[1]});
 
         const auto voxel_offset = getVoxelOffsetForScale(scale_key);
+        auto cutout_start_abs = cutout_start;
+        auto cutout_end_abs = cutout_end;
         if (subtractVoxelOffset) {
-            _xrng[0] -= voxel_offset[0];
-            _xrng[1] -= voxel_offset[0];
-
-            _yrng[0] -= voxel_offset[1];
-            _yrng[1] -= voxel_offset[1];
-
-            _zrng[0] -= voxel_offset[2];
-            _zrng[1] -= voxel_offset[2];
+            for (int i = 0; i < 3; i++) {
+                cutout_start_abs[i] -= voxel_offset[i];
+                cutout_end_abs[i] -= voxel_offset[i];
+            }
         }
+        const auto image_size = getSizeForScale(scale_key);
         const auto chunk_size = getChunkSizeForScale(scale_key);
 
-        auto block_keys = _blocksForBoundingBox(_xrng, _yrng, _zrng, scale_key);
+        auto block_keys =
+            _blocksForBoundingBox(std::array<int, 2>({cutout_start_abs[0], cutout_end_abs[0]}),
+                                  std::array<int, 2>({cutout_start_abs[1], cutout_end_abs[1]}),
+                                  std::array<int, 2>({cutout_start_abs[2], cutout_end_abs[2]}), scale_key);
+
         auto blockMortonIndexMapItr = block_index_by_res.find(scale_key);
         CHECK(blockMortonIndexMapItr != block_index_by_res.end())
             << "Failed to find scale key " << scale_key << " in block map.";
         auto blockMortonIndexMap = blockMortonIndexMapItr->second;
         for (const auto& block_key : block_keys) {
             auto itr = blockMortonIndexMap->find(block_key);
+
             if (itr != blockMortonIndexMap->end()) {
                 // add to the output array
-
                 std::shared_ptr<Block> blockShPtr = itr->second;
 
-                // Translate the block_key to voxel space coordinates
-                std::array<int, 2> _x({{(block_key.x * chunk_size[0]), ((block_key.x + 1) * chunk_size[0])}});
-                std::array<int, 2> _y({{(block_key.y * chunk_size[1]), ((block_key.y + 1) * chunk_size[1])}});
-                std::array<int, 2> _z({{(block_key.z * chunk_size[2]), ((block_key.z + 1) * chunk_size[2])}});
+                auto block_start = BlockManager::BlockStart(block_key, chunk_size);
+                auto block_end = BlockManager::BlockEnd(block_key, chunk_size, image_size);
 
-                // Make sure the view matches the dimensionality of the output data
-                int x_arr_offset = 0;
-                int y_arr_offset = 0;
-                int z_arr_offset = 0;
-                if (_x[0] < _xrng[0]) {
-                    x_arr_offset = _xrng[0] - _x[0];
-                    _x[0] = _xrng[0];
-                }
-                if (_x[1] > _xrng[1]) {
-                    _x[1] = _xrng[1];
-                }
-                if (_y[0] < _yrng[0]) {
-                    y_arr_offset = _yrng[0] - _y[0];
-                    _y[0] = _yrng[0];
-                }
-                if (_y[1] > _yrng[1]) {
-                    _y[1] = _yrng[1];
-                }
-                if (_z[0] < _zrng[0]) {
-                    z_arr_offset = _zrng[0] - _z[0];
-                    _z[0] = _zrng[0];
-                }
-                if (_z[1] > _zrng[1]) {
-                    _z[1] = _zrng[1];
-                }
+                // Get the portion of the cutout that lives within this block
+                const auto block_restricted_cutout =
+                    BlockManager::GetDataView(block_start, block_end, cutout_start_abs, cutout_end_abs);
 
-                // Scale by the offset of the input dataset
-                std::array<int, 2> _xview = _x;
-                std::array<int, 2> _yview = _y;
-                std::array<int, 2> _zview = _z;
+                auto xview = std::array<int, 2>({block_restricted_cutout.first[0] - cutout_start_abs[0],
+                                                 block_restricted_cutout.second[0] - cutout_start_abs[0]});
+                auto yview = std::array<int, 2>({block_restricted_cutout.first[1] - cutout_start_abs[1],
+                                                 block_restricted_cutout.second[1] - cutout_start_abs[1]});
+                auto zview = std::array<int, 2>({block_restricted_cutout.first[2] - cutout_start_abs[2],
+                                                 block_restricted_cutout.second[2] - cutout_start_abs[2]});
 
-                _xview[0] -= _xrng[0];
-                _xview[1] -= _xrng[0];
-                _yview[0] -= _yrng[0];
-                _yview[1] -= _yrng[0];
-                _zview[0] -= _zrng[0];
-                _zview[1] -= _zrng[0];
+                auto output_data_view = output.view(xview, yview, zview);
 
-                auto arr_view = output.view(_xview, _yview, _zview);
-                blockShPtr->get<T>(arr_view, x_arr_offset, y_arr_offset, z_arr_offset);
+                // Offset if the cutout starts somewhere in the middle of the block
+                int x_block_offset = block_restricted_cutout.first[0] - block_start[0];
+                int y_block_offset = block_restricted_cutout.first[1] - block_start[1];
+                int z_block_offset = block_restricted_cutout.first[2] - block_start[2];
+
+                blockShPtr->get<T>(output_data_view, x_block_offset, y_block_offset, z_block_offset);
             }
         }
         return;
@@ -242,9 +215,21 @@ class BlockManager {
 
     std::array<int, 3> getChunkSizeForScale(const std::string& scale_key);
     std::array<int, 3> getVoxelOffsetForScale(const std::string& scale_key);
+    std::array<int, 3> getSizeForScale(const std::string& scale_key);
     BlockEncoding getEncodingForScale(const std::string& scale_key);
 
-    static BlockKey GetBlockKeyForName(const std::string& filename, const std::array<int, 3> chunk_size);
+    static BlockInfo GetBlockInfoFromName(const std::string& filename, const std::array<int, 3> chunk_size,
+                                          const std::array<int, 3>& voxel_offset);
+
+    static std::array<int, 3> BlockStart(const BlockKey& block_key, const std::array<int, 3>& block_size);
+    static std::array<int, 3> BlockEnd(const BlockKey& block_key, const std::array<int, 3>& block_size,
+                                       const std::array<int, 3>& image_size);
+    static std::array<int, 3> BlockSizeFromExtents(const std::array<int, 3>& block_start,
+                                                   const std::array<int, 3>& block_end);
+    static std::pair<std::array<int, 3>, std::array<int, 3>> GetDataView(const std::array<int, 3>& block_start,
+                                                                         const std::array<int, 3>& block_end,
+                                                                         const std::array<int, 3> cutout_start,
+                                                                         const std::array<int, 3> cutout_end);
 
    protected:
     std::vector<BlockKey> _blocksForBoundingBox(const std::array<int, 2>& xrng, const std::array<int, 2>& yrng,

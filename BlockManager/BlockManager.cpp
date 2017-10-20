@@ -52,6 +52,11 @@ std::array<int, 3> BlockManager::getVoxelOffsetForScale(const std::string& scale
     return std::array<int, 3>({{scale.voxel_offset[0], scale.voxel_offset[1], scale.voxel_offset[2]}});
 }
 
+std::array<int, 3> BlockManager::getSizeForScale(const std::string& scale_key) {
+    const auto scale = manifest->get_scale(scale_key);
+    return std::array<int, 3>({{scale.size[0], scale.size[1], scale.size[2]}});
+}
+
 BlockEncoding BlockManager::getEncodingForScale(const std::string& scale_key) {
     const auto scale = manifest->get_scale(scale_key);
     if (scale.encoding == std::string("raw")) {
@@ -66,6 +71,7 @@ BlockEncoding BlockManager::getEncodingForScale(const std::string& scale_key) {
     }
 }
 
+// TODO(adb): refactor based on the more logical variable names in Put/Get
 std::vector<BlockKey> BlockManager::_blocksForBoundingBox(const std::array<int, 2>& xrng,
                                                           const std::array<int, 2>& yrng,
                                                           const std::array<int, 2>& zrng,
@@ -135,24 +141,68 @@ void BlockManager::_flush() {
 }
 #endif
 
-BlockKey BlockManager::GetBlockKeyForName(const std::string& filename, const std::array<int, 3> chunk_size) {
+BlockInfo BlockManager::GetBlockInfoFromName(const std::string& filename, const std::array<int, 3> chunk_size,
+                                             const std::array<int, 3>& voxel_offset) {
     std::stringstream ss(filename);
     std::string item;
-    std::array<int, 3> coords;
+    std::array<int, 3> block_start;
+    std::array<int, 3> block_end;
     int counter = 0;
     std::string delim("_");
     while (std::getline(ss, item, *delim.c_str())) {
         CHECK(counter < 3);
         auto pos = item.find(std::string("-"));
         CHECK(pos != std::string::npos);
-        coords[counter] = std::stoi(item.substr(0, pos));
+        block_start[counter] = std::stoi(item.substr(0, pos));
+        block_end[counter] = std::stoi(item.substr(pos + 1, item.size()));
         counter++;
     }
     for (int i = 0; i < 3; i++) {
-        coords[i] = floor(coords[i] / (double)chunk_size[i]);
+        block_start[i] -= voxel_offset[i];
+        block_end[i] -= voxel_offset[i];
     }
-    const auto morton_index = Morton64::XYZMorton(coords);
-    return {morton_index, coords[0], coords[1], coords[2]};
+    const auto block_size = std::array<int, 3>(
+        {block_end[0] - block_start[0], block_end[1] - block_start[1], block_end[2] - block_start[2]});
+
+    for (int i = 0; i < 3; i++) {
+        block_start[i] = floor(block_start[i] / (double)chunk_size[i]);
+    }
+    const auto morton_index = Morton64::XYZMorton(block_start);
+    BlockKey key({morton_index, block_start[0], block_start[1], block_start[2]});
+    return {key, block_size};
+}
+
+std::array<int, 3> BlockManager::BlockStart(const BlockKey& block_key, const std::array<int, 3>& block_size) {
+    return std::array<int, 3>({block_key.x * block_size[0], block_key.y * block_size[1], block_key.z * block_size[2]});
+}
+
+std::array<int, 3> BlockManager::BlockEnd(const BlockKey& block_key, const std::array<int, 3>& block_size,
+                                          const std::array<int, 3>& image_size) {
+    auto ret = std::array<int, 3>(
+        {(block_key.x + 1) * block_size[0], (block_key.y + 1) * block_size[1], (block_key.z + 1) * block_size[2]});
+    for (int i = 0; i < 3; i++)
+        if (ret[i] > image_size[i]) ret[i] = image_size[i];
+    return ret;
+}
+
+std::array<int, 3> BlockManager::BlockSizeFromExtents(const std::array<int, 3>& block_start,
+                                                      const std::array<int, 3>& block_end) {
+    return std::array<int, 3>(
+        {block_end[0] - block_start[0], block_end[1] - block_start[1], block_end[2] - block_start[2]});
+}
+
+std::pair<std::array<int, 3>, std::array<int, 3>> BlockManager::GetDataView(const std::array<int, 3>& block_start,
+                                                                            const std::array<int, 3>& block_end,
+                                                                            const std::array<int, 3> cutout_start,
+                                                                            const std::array<int, 3> cutout_end) {
+    std::pair<std::array<int, 3>, std::array<int, 3>> ret = std::make_pair(cutout_start, cutout_end);
+
+    for (int i = 0; i < 3; i++) {
+        if (cutout_start[i] < block_start[i]) ret.first[i] = block_start[i];
+        if (cutout_end[i] > block_end[i]) ret.second[i] = block_end[i];
+    }
+
+    return ret;
 }
 
 std::shared_ptr<BlockMortonIndexMap> BlockManager::_createIndexForScale(const std::string& scale_key) {
@@ -160,6 +210,7 @@ std::shared_ptr<BlockMortonIndexMap> BlockManager::_createIndexForScale(const st
 
     LOG(INFO) << "Creating index for scale " << scale_key;
 
+    const auto voxel_offset = getVoxelOffsetForScale(scale_key);
     const auto chunk_size = getChunkSizeForScale(scale_key);
     const auto block_encoding = getEncodingForScale(scale_key);
 
@@ -168,16 +219,16 @@ std::shared_ptr<BlockMortonIndexMap> BlockManager::_createIndexForScale(const st
     CHECK(fs::is_directory(path)) << "Error: Directory path for scale " << scale_key << " is not a directory!";
 
     for (auto& file : fs::directory_iterator(path)) {
-        // Parse the block key
-        const auto blockKey = GetBlockKeyForName(file.path().filename().string(), chunk_size);
+        // Parse the block name
+        const auto blockInfo = GetBlockInfoFromName(file.path().filename().string(), chunk_size, voxel_offset);
 
         // Create block
-        auto blockShPtr =
-            std::make_shared<FilesystemBlock>(file.path().string(), chunk_size[0], chunk_size[1], chunk_size[2],
-                                              sizeof(uint32_t), block_encoding, _blockDataType, _blockSettingsPtr);
+        auto blockShPtr = std::make_shared<FilesystemBlock>(
+            file.path().string(), blockInfo.block_size[0], blockInfo.block_size[1], blockInfo.block_size[2],
+            sizeof(uint32_t), block_encoding, _blockDataType, _blockSettingsPtr);
 
         // Insert block
-        ret->insert(std::make_pair(blockKey, blockShPtr));
+        ret->insert(std::make_pair(blockInfo.key, blockShPtr));
     }
     return ret;
 }

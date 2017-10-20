@@ -115,6 +115,8 @@ class Block {
     // Determine if we need to flush this block to disk before quitting
     bool is_dirty() const { return _dirty; }
 
+    std::array<int, 3> shape() const { return std::array<int, 3>({_xdim, _ydim, _zdim}); }
+
     static std::string SetNeuroglancerFileName(int xstart, int xend, int ystart, int yend, int zstart, int zend,
                                                const std::array<int, 3> &voxel_offset = {{0, 0, 0}});
 

@@ -95,7 +95,7 @@ void check_arr_equal(const DataArray_namespace::DataArray3D<uint32_t>& A,
     for (int x = 0; x < xsize; x++) {
         for (int y = 0; y < ysize; y++) {
             for (int z = 0; z < zsize; z++) {
-                ASSERT_EQ(A(x, y, z), B(x, y, z));
+                ASSERT_EQ(A(x, y, z), B(x, y, z)) << "(" << x << ", " << y << ", " << z << ")";
             }
         }
     }
@@ -182,11 +182,73 @@ TEST_F(BlockManagerTest, UnalignedOffset) {
     check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
 }
 
+TEST_F(BlockManagerTest, UnalignedEdge) {
+    int xsize = 200;
+    int ysize = 351;
+    int zsize = 19;
+    const auto testArr = make_test_array(xsize, ysize, zsize, 5);
+    const auto xrng = std::array<int, 2>({772, 972});
+    const auto yrng = std::array<int, 2>({662, 1013});
+    const auto zrng = std::array<int, 2>({40, 59});
+    const auto scale_key = std::string("0");
+    BLMShPtr->Put(*testArr, xrng, yrng, zrng, scale_key);
+
+    auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+
+    BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
+    check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
+}
+
+TEST_F(BlockManagerTest, UnalignedDoublePut) {
+    // Put, Put, Get, Get (to ensure reading from the datasource is working)
+    int xsize = 200;
+    int ysize = 351;
+    int zsize = 19;
+    const auto testArr1 = make_test_array(xsize, ysize, zsize, 6);
+    const auto testArr2 = make_test_array(xsize, ysize, zsize, 7);
+    const auto scale_key = std::string("0");
+
+    // Put 1
+    {
+        const auto xrng = std::array<int, 2>({300, 500});
+        const auto yrng = std::array<int, 2>({150, 501});
+        const auto zrng = std::array<int, 2>({28, 47});
+        BLMShPtr->Put(*testArr1, xrng, yrng, zrng, scale_key);
+    }
+    // Put 2
+    {
+        const auto xrng = std::array<int, 2>({300, 500});
+        const auto yrng = std::array<int, 2>({501, 852});
+        const auto zrng = std::array<int, 2>({28, 47});
+        BLMShPtr->Put(*testArr2, xrng, yrng, zrng, scale_key);
+    }
+
+    // Get 1
+    {
+        const auto xrng = std::array<int, 2>({300, 500});
+        const auto yrng = std::array<int, 2>({150, 501});
+        const auto zrng = std::array<int, 2>({28, 47});
+        auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+        BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
+        check_arr_equal(*testArr1, outArr, xsize, ysize, zsize);
+    }
+
+    // Get 2
+    {
+        const auto xrng = std::array<int, 2>({300, 500});
+        const auto yrng = std::array<int, 2>({501, 852});
+        const auto zrng = std::array<int, 2>({28, 47});
+        auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+        BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
+        check_arr_equal(*testArr2, outArr, xsize, ysize, zsize);
+    }
+}
+
 TEST_F(BlockManagerTest, LastCorner) {
     int xsize = 200;
     int ysize = 200;
     int zsize = 18;
-    const auto testArr = make_test_array(xsize, ysize, zsize, 5);
+    const auto testArr = make_test_array(xsize, ysize, zsize, 8);
     const auto xrng = std::array<int, 2>({824, 1024});
     const auto yrng = std::array<int, 2>({825, 1025});
     const auto zrng = std::array<int, 2>({46, 64});
@@ -219,7 +281,7 @@ TEST_F(BlockManagerTestGzip, AlignedGzip) {
     int xsize = 128;
     int ysize = 128;
     int zsize = 16;
-    const auto testArr = make_test_array(xsize, ysize, zsize, 6);
+    const auto testArr = make_test_array(xsize, ysize, zsize, 9);
     const auto xrng = std::array<int, 2>({0, 128});
     const auto yrng = std::array<int, 2>({0, 128});
     const auto zrng = std::array<int, 2>({0, 16});
@@ -236,4 +298,4 @@ int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
-}
+}  // namespace
