@@ -19,6 +19,7 @@
 // Configured options for the data server
 #define DataManager_VERSION_MAJOR @DataManager_VERSION_MAJOR@
 #define DataManager_VERSION_MINOR @DataManager_VERSION_MINOR@
+#define DataManager_VERSION_PATCH @DataManager_VERSION_PATCH@
 #define DataManager_VERSION_BUILDDATE @DataManager_VERSION_BUILDDATE@
 
 #endif  // NEURODATA_MANAGER_H_

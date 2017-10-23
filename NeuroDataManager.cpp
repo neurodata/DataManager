@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 
     google::InitGoogleLogging(argv[0]);
     gflags::SetVersionString(std::to_string(DataManager_VERSION_MAJOR) + "." +
-                             std::to_string(DataManager_VERSION_MINOR) + " build " +
+                             std::to_string(DataManager_VERSION_MINOR) + "." + std::to_string(DataManager_VERSION_PATCH) + " build " +
                              std::to_string(DataManager_VERSION_BUILDDATE));
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
