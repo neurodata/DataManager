@@ -18,7 +18,7 @@ RUN make -j $(nproc)
 FROM ubuntu:16.04 
 
 RUN apt-get update
-RUN apt-get upgrade
+RUN apt-get upgrade -y
 
 # Even compiled statically, NDM still needs a few libraries
 RUN apt-get install -y \ 
