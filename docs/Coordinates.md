@@ -1,14 +1,27 @@
 # Coordinate Systems
 
-Spatial neuroscience datasets typically use multiple coordinate systems. A voxel based coordinate system describes the number of voxels (pixels) in the image data, while a physical coordinate system (e.g. nanometers) relates the images in the database to the size of the real world specimen that was imaged. Physical coordinates are related to voxel coordinates by the `resolution` parameter, an `(x,y,z)` tuple that gives the size of each voxel in physical coordinates. [Neuroglancer](https://github.com/google/neuroglancer) uses the `resolution` parameter to appropriately scale the image data and allow data from multiple systems to be overlaid in one universal coordinate space.
+Neuroimaging datasets typically use multiple coordinate systems. Here, we enumerate and explain two coordinate systems used in the NeuroDataManager, describe typical use cases, and hope to justify our choice in building NeuroDataManager around these two coordinate systems.
 
-## Voxel Coordinates
+## Voxel Coordinates vs Image Coordinates
 
-The voxel coordinate system is in fact comprised of two related coordinate systems; the image size space and the global voxel space. On disk, images are stored in the image size space with the bottom left corner translated to the origin, and the top right corner taking the `(x,y,z)` position corresponding to the size of the dataset. In other words, the image size is simply the size of the dataset. However, it is often convenient to attribute an offset parameter to one or more axis of the dataset -- for example, data may be a subset of a larger dataset or specimen. Or, data may need to be used in a program that has a different method of indexing (e.g. Matlab). The `voxel_offset` parameter supports an arbitrary origin for the bottom left corner and defines the global voxel space.
+**Voxel coordinates** relate the images in the dataset to the size of the imaged sample and its location in the specimen. By associating the voxel coordinates of a dataset with a measure of resolution for each dimension, we can easily convert from voxel space to physical units (typically microns, nanometers, etc) and back. While NeuroDataManager uses voxel coordinates, the [Neuroglancer](https://github.com/google/neuroglancer) manifest contains the voxel resolution for each dimension of a given dataset. Neuroglancer then translates the voxel coordinates to physical coordinates, allowing multiple datasets from different sources to be displayed in the same coordinate space. 
 
-### Ingest
+**Image coordinates** describe the size of the bounding box that contains all of the images from the imaged sample. By definition, image coordinates originate at `(0,0,0)`. Typically, this is the upper left corner of the bottom slice of the imaging sample. NeuroDataManager is agnostic to the location of the origin as long as all axis are non-negative. However, we recommend sticking with the neuroimaging convention when interfacing with Data Manager -- it will make interfacing with other community tools much easier! 
 
-Most `NeuroDataManager` utilities support both image size coordinates and global voxel coordinates. The `ingest` utility provides a flag allowing the user to switch between the two spaces:
+
+![Coordinates Figure](figs/coordinates.svg)
+
+In the preceding figure, the red axis represent voxel coordinates while the blue axis represent image coordinates. The origin of the voxel coordinate system is **O** (always defined to be `(0,0,0)` in NeuroDataManager). The origin of the image coordinate system is **V**. In NeuroDataManager, we refer to **V** as the `voxel_offset`. The extent of the image coordinate system is **I**, referred to as the `image_size` in NeuroDataManager. Given **V** and **I**, we can translate provided coordinates from voxel coordinates to image coordinates, or vice versa.
+
+## NeuroDataManager Cutouts
+
+(aka *Why do I care?*)
+
+NeuroDataManager supports both coordinate systems when specifying the dimensions of a cutout for either a `Get` (`-output`) or `Put` (`-input`) request. When ingesting data (`Put` requests), it is sometimes easier to operate in image space, rather than attempting to translate the coordinates of a tile/chunk of data into voxel space. Conversely, when getting a cutout, it is often desirable to use voxel coordinates to preserve information about where the cutout is located within the specimen (not just within the imaged sample). 
+
+### NDM API (v0.2, v0.3)
+
+NDM currently provides the following flag to allow the user to specify either voxel coordinates or image coordinates:
 ```
 -subtractVoxelOffset (If false, provided coordinates do not include the
       global voxel offset of the dataset (e.g. are 0-indexed with respect to
@@ -16,26 +29,31 @@ Most `NeuroDataManager` utilities support both image size coordinates and global
       cutout arguments in a pre-processing step.) type: bool default: false
 ```
 
-The flag is best explained with the following examples. Assume the dataset is `1024` by `1024` by `1024` (in `(x,y,z)`) and suppose you have a single `z`-slice through a dataset and want to ingest the slice. If the slice starts at `z=44` and is only one voxel thick, and we wanted to use image size coordinates, the following comamand would be used:
+If `subtractVoxelOffset` is false, the cutout coordinates are expected to be in **image space**. Otherwise, the cutout coordinates are expected to be in **voxel space**. During a `Get` / `Put` operation, NeuroDataManager converts all coordinates to image space -- thus, by default `subtractVoxelOffset` is false and the cutout coordinates are expected to be in **image space**.
+
+### NDM API (future)
+We are planning to transition the current NeuroDataManager API to simply allow the user to specify the coordinate system using the following flag:
 ```
-bin/ingest -ingestdir data_dir_path/ -input test_slice.tif -x 1024 -y 1024 -z 1 -zoffset 44
+-coordinates (Specify the coordinate system in which the provided cutout bounding box lives. Options are 'image' or 'voxel'.) type: string default: image
 ```
 
-Now, if `z=44` is instead in the global voxel coordinate space, we simply pass in the `subtractVoxelOffset` flag as follows:
+Feedback in Github (See [Issue #11](https://github.com/neurodata/DataManager/issues/11)) is most welcome.
+
+## Example Usage
+
+NeuroDataManager allows the user to specify a series of offsets as part of the cutout arguments. Note that the offsets default to `0`. Therefore, if you pass in the `subtractVoxelOffset` flag, you must also specify an offset for `x` and `y` if the voxel offset of the dataset is other than `0` (if the voxel offset for a dimension is `0`, then the image coordinate space and voxel coordinate space are the same for that dimension).
+
+For example, suppose the point **V** in the figure above is located at `(256,512,0)` and the point **I** is located at `(768,1024,0)`.
+
+
+If we wish to put a single slice of the dataset using `ndm`, we could easily use image coordinates:
 ```
-bin/ingest -ingestdir data_dir_path/ -input test_slice.tif -x 1024 -y 1024 -z 1 -zoffset 44 -subtractVoxelOffset
+bin/ndm -datadir data_dir_path/ -input test_input_slice.tif -x 512 -y 512 -z 1
 ```
 
-Note that the user does not have to specify the global voxel offset -- *NeuroDataManager* will calculate the global voxel offset automatically based on the manifest file in the ingest directory. 
+Now suppose the voxel resolution of the dataset is `1 nm per voxel` and we wish to access a `256 nm^2` sample starting from `(400, 600, 0)`. We could use the following cutout request, now in voxel coordinates:
+```
+bin/ndm -datadir data_dir_path/ -output test_output_slice.tif -x 256 -xoffset 400 -y 256 -yoffset 600 -z 1 -zoffset 0 -subtractVoxelOffset
+```
 
-
-#### Command Line Offset vs Voxel Offset
-
-The `ingest` utility command line offsets provide an offset of the input `tif` file into the dataset. Note that the offsets default to `0`. Therefore, if you pass in the `subtractVoxelOffset` flag, you must also specify an offset for `x` and `y` if the voxel offset is other than `0`. For example, if our dataset above were offset at `(0,512,16)` we might pass in the following:
-```
-bin/ingest -ingestdir data_dir_path/ -input test_slice.tif -x 1024 -xoffset 0 -y 1024 -yoffset 512 -z 1 -zoffset 44 -subtractVoxelOffset
-```
-which would be equivalent to
-```
-bin/ingest -ingestdir data_dir_path/ -input test_slice.tif -x 1024 -xoffset 0 -y 1024 -yoffset 0 -z 1 -zoffset 28
-```
+Note that NeuroDataManager cutout data is always 0-indexed with respect to the supplied offsets (i.e. the cutout request above would return a `256 by 256 by 1` matrix containing the requested data). 
