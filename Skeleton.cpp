@@ -41,9 +41,9 @@ int main(int argc, char *argv[]) {
     google::InstallFailureSignalHandler();
 
     google::InitGoogleLogging(argv[0]);
-    gflags::SetVersionString(std::to_string(DataManager_VERSION_MAJOR) + "." +
-                             std::to_string(DataManager_VERSION_MINOR) + " build " +
-                             std::to_string(DataManager_VERSION_BUILDDATE));
+    gflags::SetVersionString(
+        std::to_string(DataManager_VERSION_MAJOR) + "." + std::to_string(DataManager_VERSION_MINOR) + "." +
+        std::to_string(DataManager_VERSION_PATCH) + " build " + std::to_string(DataManager_VERSION_BUILDDATE));
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     if (FLAGS_input.size() > 0) {
