@@ -68,6 +68,16 @@ class DataArray3D : public DataArray {
         return (*M)[_x][_y][_z];
     }
 
+    T operator[](unsigned int i) const {
+        const auto arr_ptr = M->origin();
+        return arr_ptr[i];
+    }
+
+    T& operator[](unsigned int i) {
+        const auto arr_ptr = M->origin();
+        return arr_ptr[i];
+    }
+
     void clear() { std::memset(M->origin(), 0, size()); }
 
     void copy(std::unique_ptr<char[]>& data, unsigned int xdim, unsigned int ydim, unsigned int zdim) {
