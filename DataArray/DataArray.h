@@ -78,7 +78,7 @@ class DataArray {
 
     void clear() { std::memset(M->origin(), 0, num_bytes()); }
 
-    void copy(std::unique_ptr<char[]>& data, unsigned int xdim, unsigned int ydim, unsigned int zdim) {
+    void copy(std::unique_ptr<char[]>& data, unsigned int xdim, unsigned int ydim, unsigned int zdim) const {
         std::memcpy(data.get(), M->origin(), xdim * ydim * zdim * sizeof(T));
     }
 
