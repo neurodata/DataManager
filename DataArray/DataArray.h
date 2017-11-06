@@ -48,7 +48,8 @@ class DataArray {
         return (*M)[boost::indices[range(xrng[0], xrng[1])][range(yrng[0], yrng[1])][range(zrng[0], zrng[1])]];
     }
 
-    size_t size() const { return M->size(); }
+    size_t num_elements() const { return M->shape()[0] * M->shape()[1] * M->shape()[2]; }
+    size_t num_bytes() const { return num_elements() * sizeof(T); }
 
     T operator()(unsigned int x, unsigned int y, unsigned int z) const {
         index _x = static_cast<index>(x);
@@ -75,7 +76,7 @@ class DataArray {
         return arr_ptr[i];
     }
 
-    void clear() { std::memset(M->origin(), 0, size()); }
+    void clear() { std::memset(M->origin(), 0, num_bytes()); }
 
     void copy(std::unique_ptr<char[]>& data, unsigned int xdim, unsigned int ydim, unsigned int zdim) {
         std::memcpy(data.get(), M->origin(), xdim * ydim * zdim * sizeof(T));
