@@ -59,6 +59,9 @@ std::vector<uint32_t> MeshExtractor::getIdsInVoxelGrid() const {
         }
     }
 
+    // Remove ID 0
+    id_set.erase(0);
+
     ids.reserve(id_set.size());
     std::copy(id_set.begin(), id_set.end(), std::back_inserter(ids));
     return ids;
