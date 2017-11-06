@@ -15,9 +15,13 @@
 
 #include "TiffArray.h"
 
+#include <glog/logging.h>
+#include <tiffio.h>
+
 using namespace DataArray_namespace;
 
-void TiffArray32::load(const std::string& filename) {
+template <class T>
+void TiffArray<T>::load(const std::string& filename) {
     TIFF* tif = TIFFOpen(filename.c_str(), "r");
     CHECK(tif);
     int page = 0;
@@ -32,7 +36,7 @@ void TiffArray32::load(const std::string& filename) {
         for (size_t row = 0; row < height; row++) {
             TIFFReadScanline(tif, data, row);
             for (size_t x = 0; x < width; x++) {
-                (*M)[x][row][page] = static_cast<uint32_t>(data[x * sizeof(uint32_t)]);
+                (*this->M)[x][row][page] = static_cast<T>(data[x * sizeof(T)]);
             }
         }
 
@@ -43,23 +47,24 @@ void TiffArray32::load(const std::string& filename) {
     TIFFClose(tif);
 }
 
-void TiffArray32::save(const std::string& filename) {
-    CHECK(M->storage_order() == boost::c_storage_order());
+template <class T>
+void TiffArray<T>::save(const std::string& filename) {
+    CHECK(this->M->storage_order() == boost::c_storage_order());
 
     TIFF* tif = TIFFOpen(filename.c_str(), "w");
     CHECK(tif);
 
-    CHECK(M->num_dimensions() == 3);
-    const auto shape = M->shape();
+    CHECK(this->M->num_dimensions() == 3);
+    const auto shape = this->M->shape();
 
     auto width = static_cast<unsigned int>(shape[0]);
     auto height = static_cast<unsigned int>(shape[1]);
 
     auto num_pages = static_cast<unsigned int>(shape[2]);
 
-    unsigned int bits_per_sample = 32;
+    unsigned int bits_per_sample = sizeof(T) * 8;
 
-    auto scan_line_buf = std::vector<uint32_t>(width);
+    auto scan_line_buf = std::vector<T>(width);
 
     for (unsigned int page = 0; page < num_pages; page++) {
         TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
@@ -72,10 +77,22 @@ void TiffArray32::save(const std::string& filename) {
 
         for (unsigned int y = 0; y < height; y++) {
             for (size_t x = 0; x < width; x++) {
-                scan_line_buf[x] = (*M)[x][y][page];
+                scan_line_buf[x] = (*this->M)[x][y][page];
             }
             TIFFWriteScanline(tif, &scan_line_buf[0], y, 0);
         }
         TIFFWriteDirectory(tif);
     }
 }
+
+#define DO_INSTANTIATE(T)        \
+    template class TiffArray<T>; \
+    /**/
+
+DO_INSTANTIATE(uint8_t)
+DO_INSTANTIATE(uint16_t)
+DO_INSTANTIATE(uint32_t)
+DO_INSTANTIATE(uint64_t)
+DO_INSTANTIATE(float)
+
+#undef DO_INSTANTIATE

@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iterator>
 
+#include <glog/logging.h>
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/device/back_inserter.hpp>

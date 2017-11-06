@@ -153,9 +153,9 @@ void Block::_fromCompressedSegmentation(std::unique_ptr<char[]> input) {
 
 SerializedBlockOutput Block::_toRaw() {
     // Convert data to Fortran order
-    DataArray_namespace::DataArray3D<uint32_t> local_arr(_data, _xdim, _ydim, _zdim);
+    DataArray_namespace::DataArray<uint32_t> local_arr(_data, _xdim, _ydim, _zdim);
 
-    DataArray_namespace::DataArray3D<uint32_t> fortran_arr(_xdim, _ydim, _zdim, boost::fortran_storage_order());
+    DataArray_namespace::DataArray<uint32_t> fortran_arr(_xdim, _ydim, _zdim, boost::fortran_storage_order());
 
     for (int x = 0; x < _xdim; x++) {
         for (int y = 0; y < _ydim; y++) {
@@ -172,9 +172,9 @@ SerializedBlockOutput Block::_toRaw() {
 }
 
 void Block::_fromRaw(std::unique_ptr<char[]> input) {
-    DataArray_namespace::DataArray3D<uint32_t> fortran_arr(input, _xdim, _ydim, _zdim, boost::fortran_storage_order());
+    DataArray_namespace::DataArray<uint32_t> fortran_arr(input, _xdim, _ydim, _zdim, boost::fortran_storage_order());
 
-    DataArray_namespace::DataArray3D<uint32_t> local_arr(_xdim, _ydim, _zdim);
+    DataArray_namespace::DataArray<uint32_t> local_arr(_xdim, _ydim, _zdim);
 
     for (int x = 0; x < _xdim; x++) {
         for (int y = 0; y < _ydim; y++) {

@@ -75,9 +75,9 @@ int main(int argc, char *argv[]) {
     google::InstallFailureSignalHandler();
 
     google::InitGoogleLogging(argv[0]);
-    gflags::SetVersionString(std::to_string(DataManager_VERSION_MAJOR) + "." +
-                             std::to_string(DataManager_VERSION_MINOR) + "." + std::to_string(DataManager_VERSION_PATCH) + " build " +
-                             std::to_string(DataManager_VERSION_BUILDDATE));
+    gflags::SetVersionString(
+        std::to_string(DataManager_VERSION_MAJOR) + "." + std::to_string(DataManager_VERSION_MINOR) + "." +
+        std::to_string(DataManager_VERSION_PATCH) + " build " + std::to_string(DataManager_VERSION_BUILDDATE));
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     if (FLAGS_exampleManifest) {
@@ -107,14 +107,14 @@ int main(int argc, char *argv[]) {
     if (FLAGS_input.size() > 0) {
         // ingest
         if (FLAGS_format == "tif") {
-            auto im_array = DataArray_namespace::TiffArray32(FLAGS_x, FLAGS_y, FLAGS_z);
+            auto im_array = DataArray_namespace::TiffArray<uint32_t>(FLAGS_x, FLAGS_y, FLAGS_z);
             im_array.load(FLAGS_input);
 
             BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
         }
 #ifdef HAVE_BLOSC
         else if (FLAGS_format == "blosc") {
-            auto im_array = DataArray_namespace::BloscArray32(FLAGS_x, FLAGS_y, FLAGS_z);
+            auto im_array = DataArray_namespace::BloscArray<uint32_t>(FLAGS_x, FLAGS_y, FLAGS_z);
             im_array.load(FLAGS_input);
 
             BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
     } else if (FLAGS_output.size() > 0) {
         // cutout
         if (FLAGS_format == "tif") {
-            auto output_arr = DataArray_namespace::TiffArray32(FLAGS_x, FLAGS_y, FLAGS_z);
+            auto output_arr = DataArray_namespace::TiffArray<uint32_t>(FLAGS_x, FLAGS_y, FLAGS_z);
             output_arr.clear();
 
             BLM.Get(output_arr, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);

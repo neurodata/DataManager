@@ -19,14 +19,18 @@
 #include "DataArray.h"
 
 #include <blosc.h>
-#include <glog/logging.h>
 
 namespace DataArray_namespace {
 
-class BloscArray32 : public DataArray3D<uint32_t> {
+/**
+ * Derived class of DataArray used to serialize Blosc encoded data. Note that template parameters must be one of:
+ *      uint8_t, uint16_t, uint32_t, uint64_t, float
+ */
+template <class T>
+class BloscArray : public DataArray<T> {
    public:
-    BloscArray32(unsigned int xdim, unsigned int ydim, unsigned int zdim) : DataArray3D<uint32_t>(xdim, ydim, zdim) {}
-    ~BloscArray32() {}
+    BloscArray(unsigned int xdim, unsigned int ydim, unsigned int zdim) : DataArray<T>(xdim, ydim, zdim) {}
+    ~BloscArray() {}
     void load(const std::string& filename) final;
     void save(const std::string& filename) final;
 };

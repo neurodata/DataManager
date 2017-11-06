@@ -18,15 +18,13 @@
 
 #include "DataArray.h"
 
-#include <glog/logging.h>
-#include <tiffio.h>
-
 namespace DataArray_namespace {
 
-class TiffArray32 : public DataArray3D<uint32_t> {
+template <class T>
+class TiffArray : public DataArray<T> {
    public:
-    TiffArray32(unsigned int xdim, unsigned int ydim, unsigned int zdim) : DataArray3D<uint32_t>(xdim, ydim, zdim) {}
-    ~TiffArray32() {}
+    TiffArray(unsigned int xdim, unsigned int ydim, unsigned int zdim) : DataArray<T>(xdim, ydim, zdim) {}
+    ~TiffArray() {}
     void load(const std::string& filename) final;
     void save(const std::string& filename) final;
 };

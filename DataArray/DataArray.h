@@ -16,7 +16,6 @@
 #ifndef DATA_ARRAY_H
 #define DATA_ARRAY_H
 
-#include <glog/logging.h>
 #include "boost/multi_array.hpp"
 
 #include <array>
@@ -25,26 +24,24 @@
 
 namespace DataArray_namespace {
 
-class DataArray {};
-
-template <typename T>
-class DataArray3D : public DataArray {
+template <class T>
+class DataArray {
    public:
     typedef typename boost::multi_array<T, 3> array_type;
     typedef typename array_type::index index;
     typedef typename array_type::index_range range;
     typedef typename array_type::template array_view<3>::type array_view;
 
-    DataArray3D(unsigned int xdim, unsigned int ydim, unsigned int zdim,
-                const boost::general_storage_order<3>& so = boost::c_storage_order()) {
+    DataArray(unsigned int xdim, unsigned int ydim, unsigned int zdim,
+              const boost::general_storage_order<3>& so = boost::c_storage_order()) {
         M = std::shared_ptr<array_type>(new array_type(boost::extents[xdim][ydim][zdim], so));
     }
-    DataArray3D(std::unique_ptr<char[]>& data, unsigned int xdim, unsigned int ydim, unsigned int zdim,
-                const boost::general_storage_order<3>& so = boost::c_storage_order())
-        : DataArray3D(xdim, ydim, zdim, so) {
+    DataArray(std::unique_ptr<char[]>& data, unsigned int xdim, unsigned int ydim, unsigned int zdim,
+              const boost::general_storage_order<3>& so = boost::c_storage_order())
+        : DataArray(xdim, ydim, zdim, so) {
         std::memcpy(M->origin(), data.get(), xdim * ydim * zdim * sizeof(T));
     }
-    ~DataArray3D() { M.reset(); }
+    ~DataArray() { M.reset(); }
 
     array_view view(const std::array<int, 2>& xrng, const std::array<int, 2>& yrng,
                     const std::array<int, 2>& zrng) const {

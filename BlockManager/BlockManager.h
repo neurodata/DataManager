@@ -65,7 +65,7 @@ class BlockManager {
      * datasource.
      */
     template <typename T>
-    void Put(const DataArray_namespace::DataArray3D<T>& data, const std::array<int, 2>& xrng,
+    void Put(const DataArray_namespace::DataArray<T>& data, const std::array<int, 2>& xrng,
              const std::array<int, 2>& yrng, const std::array<int, 2>& zrng, const std::string& scale_key,
              bool subtractVoxelOffset = false) {
         auto cutout_start = std::array<int, 3>({xrng[0], yrng[0], zrng[0]});
@@ -153,7 +153,7 @@ class BlockManager {
     }
 
     template <typename T>
-    void Get(DataArray_namespace::DataArray3D<T> output, const std::array<int, 2>& xrng, const std::array<int, 2>& yrng,
+    void Get(DataArray_namespace::DataArray<T> output, const std::array<int, 2>& xrng, const std::array<int, 2>& yrng,
              const std::array<int, 2>& zrng, const std::string& scale_key, bool subtractVoxelOffset = false) {
         auto cutout_start = std::array<int, 3>({xrng[0], yrng[0], zrng[0]});
         auto cutout_end = std::array<int, 3>({xrng[1], yrng[1], zrng[1]});

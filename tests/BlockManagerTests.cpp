@@ -75,9 +75,9 @@ static std::shared_ptr<Manifest> setup_filesystem_datastore() {
     return make_manifest();
 }
 
-std::shared_ptr<DataArray_namespace::DataArray3D<uint32_t>> make_test_array(unsigned int xsize, unsigned int ysize,
-                                                                            unsigned int zsize, int test_id) {
-    auto dataArrayShPtr = std::make_shared<DataArray_namespace::DataArray3D<uint32_t>>(xsize, ysize, zsize);
+std::shared_ptr<DataArray_namespace::DataArray<uint32_t>> make_test_array(unsigned int xsize, unsigned int ysize,
+                                                                          unsigned int zsize, int test_id) {
+    auto dataArrayShPtr = std::make_shared<DataArray_namespace::DataArray<uint32_t>>(xsize, ysize, zsize);
 
     for (unsigned int z = 0; z < zsize; z++) {
         for (unsigned int y = 0; y < ysize; y++) {
@@ -90,8 +90,8 @@ std::shared_ptr<DataArray_namespace::DataArray3D<uint32_t>> make_test_array(unsi
     return dataArrayShPtr;
 }
 
-void check_arr_equal(const DataArray_namespace::DataArray3D<uint32_t>& A,
-                     const DataArray_namespace::DataArray3D<uint32_t>& B, int xsize, int ysize, int zsize) {
+void check_arr_equal(const DataArray_namespace::DataArray<uint32_t>& A,
+                     const DataArray_namespace::DataArray<uint32_t>& B, int xsize, int ysize, int zsize) {
     for (int x = 0; x < xsize; x++) {
         for (int y = 0; y < ysize; y++) {
             for (int z = 0; z < zsize; z++) {
@@ -125,7 +125,7 @@ TEST_F(BlockManagerTest, Aligned) {
     const auto scale_key = std::string("0");
     BLMShPtr->Put(*testArr, xrng, yrng, zrng, scale_key);
 
-    const auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+    const auto outArr = DataArray_namespace::DataArray<uint32_t>(xsize, ysize, zsize);
 
     BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
     check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
@@ -142,7 +142,7 @@ TEST_F(BlockManagerTest, AlignedOffsetSubtraction) {
     const auto scale_key = std::string("0");
     BLMShPtr->Put(*testArr, xrng, yrng, zrng, scale_key, /*subtractVoxelOffset=*/true);
 
-    const auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+    const auto outArr = DataArray_namespace::DataArray<uint32_t>(xsize, ysize, zsize);
 
     BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key, /*subtractVoxelOffset=*/true);
     check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
@@ -159,7 +159,7 @@ TEST_F(BlockManagerTest, Slab) {
     const auto scale_key = std::string("0");
     BLMShPtr->Put(*testArr, xrng, yrng, zrng, scale_key);
 
-    const auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+    const auto outArr = DataArray_namespace::DataArray<uint32_t>(xsize, ysize, zsize);
 
     BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
     check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
@@ -176,7 +176,7 @@ TEST_F(BlockManagerTest, UnalignedOffset) {
     const auto scale_key = std::string("0");
     BLMShPtr->Put(*testArr, xrng, yrng, zrng, scale_key);
 
-    const auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+    const auto outArr = DataArray_namespace::DataArray<uint32_t>(xsize, ysize, zsize);
 
     BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
     check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
@@ -193,7 +193,7 @@ TEST_F(BlockManagerTest, UnalignedEdge) {
     const auto scale_key = std::string("0");
     BLMShPtr->Put(*testArr, xrng, yrng, zrng, scale_key);
 
-    auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+    auto outArr = DataArray_namespace::DataArray<uint32_t>(xsize, ysize, zsize);
 
     BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
     check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
@@ -228,7 +228,7 @@ TEST_F(BlockManagerTest, UnalignedDoublePut) {
         const auto xrng = std::array<int, 2>({300, 500});
         const auto yrng = std::array<int, 2>({150, 501});
         const auto zrng = std::array<int, 2>({28, 47});
-        auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+        auto outArr = DataArray_namespace::DataArray<uint32_t>(xsize, ysize, zsize);
         BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
         check_arr_equal(*testArr1, outArr, xsize, ysize, zsize);
     }
@@ -238,7 +238,7 @@ TEST_F(BlockManagerTest, UnalignedDoublePut) {
         const auto xrng = std::array<int, 2>({300, 500});
         const auto yrng = std::array<int, 2>({501, 852});
         const auto zrng = std::array<int, 2>({28, 47});
-        auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+        auto outArr = DataArray_namespace::DataArray<uint32_t>(xsize, ysize, zsize);
         BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
         check_arr_equal(*testArr2, outArr, xsize, ysize, zsize);
     }
@@ -255,7 +255,7 @@ TEST_F(BlockManagerTest, LastCorner) {
     const auto scale_key = std::string("0");
     BLMShPtr->Put(*testArr, xrng, yrng, zrng, scale_key, /*subtractVoxelOffset=*/true);
 
-    const auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+    const auto outArr = DataArray_namespace::DataArray<uint32_t>(xsize, ysize, zsize);
 
     BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key, /*subtractVoxelOffset=*/true);
     check_arr_equal(*testArr, outArr, xsize, ysize, zsize);
@@ -288,7 +288,7 @@ TEST_F(BlockManagerTestGzip, AlignedGzip) {
     const auto scale_key = std::string("0");
     BLMShPtr->Put(*testArr, xrng, yrng, zrng, scale_key);
 
-    const auto outArr = DataArray_namespace::DataArray3D<uint32_t>(xsize, ysize, zsize);
+    const auto outArr = DataArray_namespace::DataArray<uint32_t>(xsize, ysize, zsize);
 
     BLMShPtr->Get(outArr, xrng, yrng, zrng, scale_key);
     check_arr_equal(*testArr, outArr, xsize, ysize, zsize);

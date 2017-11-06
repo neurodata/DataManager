@@ -18,6 +18,8 @@
 
 #include <DataArray/DataArray.h>
 
+#include <glog/logging.h>
+
 #include <memory>
 #include <string>
 
@@ -47,26 +49,14 @@ class Block {
     ~Block();
 
     template <typename T>
-    void add(const DataArray_namespace::DataArray3D<T> &arr, bool overwrite = false) {
-        // TODO(adb): check that this method works
-        CHECK(false) << "Not implemented.";
-#if 0
-        DataArray_namespace::DataArray3D<T> local_arr(data, _xdim, _ydim, _zdim);
-
-        if (overwrite) local_arr.clear();
-        local_arr += arr;
-#endif
-    }
-
-    template <typename T>
-    void add(const typename DataArray_namespace::DataArray3D<T>::array_view &view, int x_arr_offset, int y_arr_offset,
+    void add(const typename DataArray_namespace::DataArray<T>::array_view &view, int x_arr_offset, int y_arr_offset,
              int z_arr_offset, bool overwrite = false) {
         if (!_data_loaded) {
             load();
         }
-        DataArray_namespace::DataArray3D<T> local_arr(_data, _xdim, _ydim, _zdim);
+        DataArray_namespace::DataArray<T> local_arr(_data, _xdim, _ydim, _zdim);
         if (overwrite) local_arr.clear();
-        typedef typename DataArray_namespace::DataArray3D<T>::index index;
+        typedef typename DataArray_namespace::DataArray<T>::index index;
 
         // Iterate over the view
         const auto num_dims = view.dimensionality;
@@ -86,14 +76,14 @@ class Block {
     }
 
     template <typename T>
-    void get(typename DataArray_namespace::DataArray3D<T>::array_view &view, int x_arr_offset, int y_arr_offset,
+    void get(typename DataArray_namespace::DataArray<T>::array_view &view, int x_arr_offset, int y_arr_offset,
              int z_arr_offset) {
         if (!_data_loaded) {
             load();
         }
-        DataArray_namespace::DataArray3D<T> local_arr(_data, _xdim, _ydim, _zdim);
+        DataArray_namespace::DataArray<T> local_arr(_data, _xdim, _ydim, _zdim);
 
-        typedef typename DataArray_namespace::DataArray3D<T>::index index;
+        typedef typename DataArray_namespace::DataArray<T>::index index;
         const auto num_dims = view.dimensionality;
         CHECK(num_dims == 3);
 
