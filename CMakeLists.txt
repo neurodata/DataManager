@@ -27,6 +27,7 @@ if(USE_STATIC_LIBS)
 endif()
 
 find_package(Gflags REQUIRED)
+list(APPEND Gflags_LIBRARIES pthread)
 find_package(ZLIB REQUIRED)
 
 find_package(TIFF REQUIRED) 
@@ -91,4 +92,4 @@ target_link_libraries(ndm ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${B
 set(SKELETON_LIBRARIES Skeleton)
 
 add_executable(skeleton Skeleton.cpp)
-target_link_libraries(skeleton ${SKELETON_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES})
+target_link_libraries(skeleton ${SKELETON_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES} ${ZLIB_LIBRARIES})
