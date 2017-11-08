@@ -13,26 +13,27 @@
  *  limitations under the License.
  */
 
-#ifndef FS_BLOCK_H
-#define FS_BLOCK_H
+#ifndef BLOCK_TYPES_H
+#define BLOCK_TYPES_H
 
-#include "Block.h"
+#include <array>
+#include <cstdint>
 
 namespace BlockManager_namespace {
 
-class FilesystemBlock : public Block {
-   public:
-    FilesystemBlock(const std::string& path_name, int xdim, int ydim, int zdim, size_t dtype_size, BlockEncoding format,
-                    BlockDataType data_type, const std::shared_ptr<BlockSettings>& blockSettings)
-        : Block(xdim, ydim, zdim, dtype_size, format, data_type, blockSettings), _path_name(path_name) {}
-    ~FilesystemBlock() {}
-
-    void load();
-    void save();
-
-   protected:
-    std::string _path_name;
+struct BlockKey {
+    uint64_t morton_index;
+    int x;
+    int y;
+    int z;
+    bool operator<(const BlockKey& other) const { return (morton_index < other.morton_index); }
 };
-}
 
-#endif  // FS_BLOCK_H
+struct BlockInfo {
+    BlockKey key;
+    std::array<int, 3> block_size;
+};
+
+};  // namespace BlockManager_namespace
+
+#endif  // BLOCK_TYPES_H

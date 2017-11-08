@@ -44,8 +44,9 @@ enum class BlockDataType { UINT8, UINT16, UINT32, UINT64 };
 
 class Block {
    public:
-    Block(const std::string &path_name, int xdim, int ydim, int zdim, size_t dtype_size, BlockEncoding encoding,
-          BlockDataType data_type, const std::shared_ptr<BlockSettings> &blockSettingsPtr);
+    // Note that blocks are allocated on creation, regardless of whether or not data is loaded
+    Block(int xdim, int ydim, int zdim, size_t dtype_size, BlockEncoding encoding, BlockDataType data_type,
+          const std::shared_ptr<BlockSettings> &blockSettingsPtr);
     ~Block();
 
     template <typename T>
@@ -107,11 +108,7 @@ class Block {
 
     std::array<int, 3> shape() const { return std::array<int, 3>({_xdim, _ydim, _zdim}); }
 
-    static std::string SetNeuroglancerFileName(int xstart, int xend, int ystart, int yend, int zstart, int zend,
-                                               const std::array<int, 3> &voxel_offset = {{0, 0, 0}});
-
    protected:
-    std::string _path_name;
     std::unique_ptr<char[]> _data;  // C order
     const std::shared_ptr<BlockSettings> _blockSettingsPtr;
     int _xdim;
@@ -141,6 +138,8 @@ class Block {
     SerializedBlockOutput _toJpeg();
     void _fromJpeg(std::unique_ptr<char[]> input);
 };
+
+typedef std::shared_ptr<Block> BlockShPtr;
 
 }  // namespace BlockManager_namespace
 

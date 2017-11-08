@@ -20,10 +20,9 @@
 
 using namespace BlockManager_namespace;
 
-Block::Block(const std::string& path_name, int xdim, int ydim, int zdim, size_t dtype_size, BlockEncoding encoding,
-             BlockDataType data_type, const std::shared_ptr<BlockSettings>& blockSettingsPtr)
-    : _path_name(path_name),
-      _blockSettingsPtr(blockSettingsPtr),
+Block::Block(int xdim, int ydim, int zdim, size_t dtype_size, BlockEncoding encoding, BlockDataType data_type,
+             const std::shared_ptr<BlockSettings>& blockSettingsPtr)
+    : _blockSettingsPtr(blockSettingsPtr),
       _xdim(xdim),
       _ydim(ydim),
       _zdim(zdim),
@@ -42,21 +41,6 @@ void Block::zero_block() {
     _dirty = true;
 }
 
-std::string Block::SetNeuroglancerFileName(int xstart, int xend, int ystart, int yend, int zstart, int zend,
-                                           const std::array<int, 3>& voxel_offset) {
-    // neuroglancer files are written into the global coordinate space,
-    // whereas block coordinates use the data bounding box coordinate space,
-    // so we need to add the voxel_offset to the filename.
-    const auto xstart_str = std::to_string(xstart + voxel_offset[0]);
-    const auto xend_str = std::to_string(xend + voxel_offset[0]);
-    const auto ystart_str = std::to_string(ystart + voxel_offset[1]);
-    const auto yend_str = std::to_string(yend + voxel_offset[1]);
-    const auto zstart_str = std::to_string(zstart + voxel_offset[2]);
-    const auto zend_str = std::to_string(zend + voxel_offset[2]);
-
-    return xstart_str + "-" + xend_str + "_" + ystart_str + "-" + yend_str + "_" + zstart_str + "-" + zend_str;
-}
-
 void Block::_allocate() {
     size_t arr_size = _xdim * _ydim * _zdim * _dtype_size;
     // Allocate and zero an empty data buffer
@@ -67,10 +51,7 @@ void Block::_flush() {
     if (is_dirty()) {
         save();
     }
-    // TODO(adb): flushing and then loading again will cause a seg fault, since we only alloc on creation. So, zero the
-    // block instead. If we start to run out of memory we will just delete block objects.
-    zero_block();
-    _data_loaded = false;
+    _data_loaded = true;
     _dirty = false;
 }
 

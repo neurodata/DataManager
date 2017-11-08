@@ -23,11 +23,10 @@
 #include <string>
 
 using namespace BlockManager_namespace;
-namespace fs = boost::filesystem;
 
-BlockManager::BlockManager(const std::string& directory_path_name, std::shared_ptr<Manifest> manifestShPtr,
-                           const BlockDataStore blockDataStore, const BlockSettings& blockSettings)
-    : directory_path_name(directory_path_name), manifest(manifestShPtr), _blockDataStore(blockDataStore) {
+BlockManager::BlockManager(std::shared_ptr<Manifest> manifestShPtr, std::shared_ptr<BlockDataStore> blockDataStoreShPtr,
+                           const BlockSettings& blockSettings)
+    : manifest(manifestShPtr), _dataStore(blockDataStoreShPtr) {
     _blockSettingsPtr = std::make_shared<BlockSettings>(blockSettings);
     _init();
 }
@@ -42,8 +41,7 @@ std::array<int, 3> BlockManager::getChunkSizeForScale(const std::string& scale_k
 
     CHECK(scale.chunk_sizes.size() > 0);
     if (scale.chunk_sizes.size() > 1)
-        LOG(WARNING) << "This dataset has multiple chunk_size options. "
-                        "Undefined behavior may occur!";
+        LOG(WARNING) << "This dataset has multiple chunk_size options. Undefined behavior will occur!";
     return scale.chunk_sizes[0];
 }
 
@@ -122,12 +120,9 @@ void BlockManager::_init() {
         LOG(FATAL) << "Unable to parse data type string: " << data_type_str;
     }
 
-    // Scan the directory containing the manifest and index all the files for
-    // each resolution
+    // Build a map for storing blocks read in for each scale
     for (const auto& scale : manifest->_scales) {
-        std::shared_ptr<BlockMortonIndexMap> blockIdxMap = _createIndexForScale(scale.key);
-        LOG(INFO) << "Read " << blockIdxMap->size() << " blocks for scale " << scale.key;
-        block_index_by_res.insert(std::make_pair(scale.key, blockIdxMap));
+        block_index_by_res.insert(std::make_pair(scale.key, std::make_shared<BlockMortonIndexMap>()));
     }
 }
 
@@ -140,37 +135,6 @@ void BlockManager::_flush() {
     }
 }
 #endif
-
-BlockInfo BlockManager::GetBlockInfoFromName(const std::string& filename, const std::array<int, 3> chunk_size,
-                                             const std::array<int, 3>& voxel_offset) {
-    std::stringstream ss(filename);
-    std::string item;
-    std::array<int, 3> block_start;
-    std::array<int, 3> block_end;
-    int counter = 0;
-    std::string delim("_");
-    while (std::getline(ss, item, *delim.c_str())) {
-        CHECK(counter < 3);
-        auto pos = item.find(std::string("-"));
-        CHECK(pos != std::string::npos);
-        block_start[counter] = std::stoi(item.substr(0, pos));
-        block_end[counter] = std::stoi(item.substr(pos + 1, item.size()));
-        counter++;
-    }
-    for (int i = 0; i < 3; i++) {
-        block_start[i] -= voxel_offset[i];
-        block_end[i] -= voxel_offset[i];
-    }
-    const auto block_size = std::array<int, 3>(
-        {block_end[0] - block_start[0], block_end[1] - block_start[1], block_end[2] - block_start[2]});
-
-    for (int i = 0; i < 3; i++) {
-        block_start[i] = floor(block_start[i] / (double)chunk_size[i]);
-    }
-    const auto morton_index = Morton64::XYZMorton(block_start);
-    BlockKey key({morton_index, block_start[0], block_start[1], block_start[2]});
-    return {key, block_size};
-}
 
 std::array<int, 3> BlockManager::BlockStart(const BlockKey& block_key, const std::array<int, 3>& block_size) {
     return std::array<int, 3>({block_key.x * block_size[0], block_key.y * block_size[1], block_key.z * block_size[2]});
@@ -202,33 +166,5 @@ std::pair<std::array<int, 3>, std::array<int, 3>> BlockManager::GetDataView(cons
         if (cutout_end[i] > block_end[i]) ret.second[i] = block_end[i];
     }
 
-    return ret;
-}
-
-std::shared_ptr<BlockMortonIndexMap> BlockManager::_createIndexForScale(const std::string& scale_key) {
-    std::shared_ptr<BlockMortonIndexMap> ret = std::make_shared<BlockMortonIndexMap>();
-
-    LOG(INFO) << "Creating index for scale " << scale_key;
-
-    const auto voxel_offset = getVoxelOffsetForScale(scale_key);
-    const auto chunk_size = getChunkSizeForScale(scale_key);
-    const auto block_encoding = getEncodingForScale(scale_key);
-
-    // For each scale, iterate through the files in that directory
-    const auto path = fs::path(directory_path_name) / fs::path(scale_key);
-    CHECK(fs::is_directory(path)) << "Error: Directory path for scale " << scale_key << " is not a directory!";
-
-    for (auto& file : fs::directory_iterator(path)) {
-        // Parse the block name
-        const auto blockInfo = GetBlockInfoFromName(file.path().filename().string(), chunk_size, voxel_offset);
-
-        // Create block
-        auto blockShPtr = std::make_shared<FilesystemBlock>(
-            file.path().string(), blockInfo.block_size[0], blockInfo.block_size[1], blockInfo.block_size[2],
-            sizeof(uint32_t), block_encoding, _blockDataType, _blockSettingsPtr);
-
-        // Insert block
-        ret->insert(std::make_pair(blockInfo.key, blockShPtr));
-    }
     return ret;
 }

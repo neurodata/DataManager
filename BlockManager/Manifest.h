@@ -17,6 +17,7 @@
 #define MANIFEST_H
 
 #include <array>
+#include <fstream>
 #include <memory>
 #include <vector>
 
@@ -67,12 +68,15 @@ struct Scale {
 
 class Manifest {
    public:
-    Manifest(const std::string& manifest_path_name) { Read(manifest_path_name); }
+    Manifest(const std::string& manifest_path_name) { ReadLocal(manifest_path_name); }
     Manifest() {}
     ~Manifest() {}
 
     void Write(const std::string& filename);
-    void Read(const std::string& filename);
+    /* Support creating Manifest from local file in constructor */
+    void ReadLocal(const std::string& filepath);
+
+    void Read(const std::ifstream& ifs);
     void Print() const;
 
     static std::shared_ptr<Manifest> MakeExampleManifest();
@@ -126,6 +130,8 @@ class Manifest {
     std::string _mesh = "";
     friend BlockManager;
 };
+
+typedef std::shared_ptr<Manifest> ManifestShPtr;
 
 }  // namespace BlockManager_namespace
 

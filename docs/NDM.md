@@ -12,15 +12,15 @@ The `ndm` client program has two primary modes of operation:
 
 ### Program Reference
 
-All commands are prefixed with a single dash (`-`). Below is a listing of the `ndm` program options as of version 0.2. 
+All commands are prefixed with a single dash (`-`). Below is a listing of the `ndm` program options as of version 0.3. 
 
 * `help` : List these options.
 
 * `version` : Obtain the current NeuroDataManager version and build date.
-* `datadir` : The path to the directory containing a Neuroglancer JSON manifest. Currently, only directories on the local filesystem (filesystem datastore) are supported.
+* `datastore` : The path to the datastore containing a Neuroglancer JSON manifest. Currently, only directories on the local filesystem (filesystem datastore) are supported. (Replaces deprecated parameter `datadir`.)
 * `exampleManifest` : Generate an example Neuroglancer manifest to use as a template for setting up a new data directory. Can be supplied with no other arguments. Will generate the manifest and exit. The example manifest will be written to `manifest.ex.json` in the calling directory. 
 * `format` : Input/output file format. Currently `tif` is default and is the only format supported.
-* `gzip` : Indicates the precomputed chunk data in the data directory is compressed using gzip. If you are attempting to read data from the data directory and are getting errors loading precompued chunks, the data is likely compressed with gzip.
+* `gzip` : Indicates the precomputed chunk data in the data directory is compressed using gzip. If you are attempting to read data from the data directory and are getting errors loading precomputed chunks, the data is likely compressed with gzip.
 * `input` : Path to the input file for Ingest. Passing this flag indicates `ndm` should run in ingest mode. Only one operation can be run at a time, and Ingest takes priority over Cutout (if both flags are passed). 
 * `output` : Path to the output file for Cutout. 
 * `scale` : String indicating the scale key to use for this ingest/cutout operation. Must match the scale key defined in the Neuroglancer JSON manifest.

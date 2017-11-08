@@ -16,6 +16,7 @@
 #include "NeuroDataManager.h"
 
 #include "BlockManager/BlockManager.h"
+#include "BlockManager/Datastore/FilesystemBlockStore.h"
 #include "BlockManager/Manifest.h"
 #include "DataArray/TiffArray.h"
 #ifdef HAVE_BLOSC
@@ -24,6 +25,7 @@
 
 #include <iostream>
 #include <memory>
+#include <set>
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
@@ -31,7 +33,7 @@
 
 namespace fs = boost::filesystem;
 
-static bool ValidateInputFileFormat(const char *filename, const std::string &value) {
+static bool ValidateInputFileFormat(const char* flagname, const std::string& value) {
     if (value == std::string("tif")) {
         return true;
     }
@@ -43,7 +45,17 @@ static bool ValidateInputFileFormat(const char *filename, const std::string &val
     return false;
 }
 
-DEFINE_string(datadir, "",
+static bool DeprecateDataDirFlag(const char* filename, const std::string& value) {
+    if (value.size() > 0) {
+        std::cerr << "The `-datadir` flag has been deprecated. Use `-datastore` instead.\n";
+        return false;
+    }
+    return true;
+}
+
+DEFINE_string(datadir, "", "Deprecated: Use `-datastore` instead.");
+DEFINE_validator(datadir, &DeprecateDataDirFlag);
+DEFINE_string(datastore, "",
               "Path to the data directory containing a Neuroglancer JSON "
               "Manifest.");
 DEFINE_string(input, "", "Path to the input file (for ingest).");
@@ -71,7 +83,7 @@ DEFINE_bool(subtractVoxelOffset, false,
             "cutout arguments in a pre-processing step.");
 DEFINE_bool(gzip, false, "Compress output using gzip.");
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     google::InstallFailureSignalHandler();
 
     google::InitGoogleLogging(argv[0]);
@@ -86,19 +98,13 @@ int main(int argc, char *argv[]) {
         return EXIT_SUCCESS;
     }
 
-    const auto path = fs::path(FLAGS_datadir);
-    CHECK(fs::is_directory(path)) << "Error: data directory '" << FLAGS_datadir << "' does not exist.";
-
-    LOG(INFO) << "Using data directory " << FLAGS_datadir;
-    const auto manifest_path = path / fs::path("info");
-    CHECK(fs::is_regular_file(manifest_path));
-
-    auto manifestShPtr =
-        std::make_shared<BlockManager_namespace::Manifest>(BlockManager_namespace::Manifest(manifest_path.string()));
-
+    LOG(INFO) << "Using data store " << FLAGS_datastore;
+    auto dataStoreShPtr = std::make_shared<BlockManager_namespace::FilesystemBlockStore>(
+        BlockManager_namespace::FilesystemBlockStore(FLAGS_datastore));
     BlockManager_namespace::BlockSettings settings({FLAGS_gzip});
-    BlockManager_namespace::BlockManager BLM(path.string(), manifestShPtr,
-                                             BlockManager_namespace::BlockDataStore::FILESYSTEM, settings);
+    auto manifestShPtr = dataStoreShPtr->GetManifest();
+
+    BlockManager_namespace::BlockManager BLM(manifestShPtr, dataStoreShPtr, settings);
 
     auto xrng = std::array<int, 2>({{static_cast<int>(FLAGS_xoffset), static_cast<int>(FLAGS_x + FLAGS_xoffset)}});
     auto yrng = std::array<int, 2>({{static_cast<int>(FLAGS_yoffset), static_cast<int>(FLAGS_y + FLAGS_yoffset)}});

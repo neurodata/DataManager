@@ -16,14 +16,14 @@
 #ifndef BLOCK_MANAGER_H
 #define BLOCK_MANAGER_H
 
-// #include "Blocks/Block.h"
-#include "Blocks/FilesystemBlock.h"
+#include "Blocks/Block.h"
+#include "Blocks/Types.h"
+#include "Datastore/BlockDataStore.h"
 #include "Manifest.h"
 
 #include "../DataArray/DataArray.h"
 
 #include <glog/logging.h>
-#include <boost/filesystem.hpp>
 
 #include <map>
 #include <memory>
@@ -31,29 +31,13 @@
 #include <vector>
 
 namespace BlockManager_namespace {
-namespace fs = boost::filesystem;
 
-enum class BlockDataStore { FILESYSTEM };
-
-struct BlockKey {
-    uint64_t morton_index;
-    int x;
-    int y;
-    int z;
-    bool operator<(const BlockKey& other) const { return (morton_index < other.morton_index); }
-};
-
-struct BlockInfo {
-    BlockKey key;
-    std::array<int, 3> block_size;
-};
-
-typedef std::map<BlockKey, std::shared_ptr<Block>> BlockMortonIndexMap;
+typedef std::map<BlockKey, BlockShPtr> BlockMortonIndexMap;
 
 class BlockManager {
    public:
-    BlockManager(const std::string& directory_path_name, std::shared_ptr<Manifest> manifestShPtr,
-                 const BlockDataStore blockDataStore, const BlockSettings& settings);
+    BlockManager(std::shared_ptr<Manifest> manifestShPtr, std::shared_ptr<BlockDataStore> blockDataStoreShPtr,
+                 const BlockSettings& settings);
     ~BlockManager();
 
     /**
@@ -114,32 +98,17 @@ class BlockManager {
             const auto input_data_view = data.view(xview, yview, zview);
 
             auto itr = blockMortonIndexMap->find(block_key);
-            std::shared_ptr<Block> blockShPtr;
+            BlockShPtr blockShPtr;
             if (itr == blockMortonIndexMap->end()) {
                 // Create a new block and add it to the map
-                std::string block_name =
-                    Block::SetNeuroglancerFileName(block_start[0], block_end[0], block_start[1], block_end[1],
-                                                   block_start[2], block_end[2], voxel_offset);
+                const auto block_name = _dataStore->BlockName(block_start[0], block_end[0], block_start[1],
+                                                              block_end[1], block_start[2], block_end[2], voxel_offset);
 
-                const auto block_path = fs::path(directory_path_name) / fs::path(scale_key) / fs::path(block_name);
-                std::string block_path_name = block_path.string();
-                switch (_blockDataStore) {
-                    case BlockDataStore::FILESYSTEM: {
-                        blockShPtr = std::make_shared<FilesystemBlock>(block_path_name, block_size[0], block_size[1],
-                                                                       block_size[2], sizeof(uint32_t), block_encoding,
-                                                                       _blockDataType, _blockSettingsPtr);
-                    } break;
-                    default: { LOG(FATAL) << "Unknown backing datastore."; }
-                }
-                blockShPtr->zero_block();
+                blockShPtr = _dataStore->CreateBlock(block_name, scale_key, block_size[0], block_size[1], block_size[2],
+                                                     sizeof(T), block_encoding, _blockDataType, _blockSettingsPtr);
                 blockMortonIndexMap->insert(std::make_pair(block_key, blockShPtr));
             } else {
-                switch (_blockDataStore) {
-                    case BlockDataStore::FILESYSTEM: {
-                        blockShPtr = std::dynamic_pointer_cast<FilesystemBlock>(itr->second);
-                    } break;
-                    default: { LOG(FATAL) << "Unkown backing datastore."; }
-                }
+                blockShPtr = itr->second;
             }
 
             // Offset if the cutout starts somewhere in the middle of the block
@@ -147,7 +116,7 @@ class BlockManager {
             int y_block_offset = block_restricted_cutout.first[1] - block_start[1];
             int z_block_offset = block_restricted_cutout.first[2] - block_start[2];
 
-            blockShPtr->add<uint32_t>(input_data_view, x_block_offset, y_block_offset, z_block_offset);
+            blockShPtr->add<T>(input_data_view, x_block_offset, y_block_offset, z_block_offset);
         }
         return;
     }
@@ -169,6 +138,7 @@ class BlockManager {
         }
         const auto image_size = getSizeForScale(scale_key);
         const auto chunk_size = getChunkSizeForScale(scale_key);
+        const auto block_encoding = getEncodingForScale(scale_key);
 
         auto block_keys =
             _blocksForBoundingBox(std::array<int, 2>({cutout_start_abs[0], cutout_end_abs[0]}),
@@ -182,33 +152,43 @@ class BlockManager {
         for (const auto& block_key : block_keys) {
             auto itr = blockMortonIndexMap->find(block_key);
 
-            if (itr != blockMortonIndexMap->end()) {
+            auto block_start = BlockManager::BlockStart(block_key, chunk_size);
+            auto block_end = BlockManager::BlockEnd(block_key, chunk_size, image_size);
+
+            BlockShPtr blockShPtr;
+            if (itr == blockMortonIndexMap->end()) {
+                // If the block isn't in our map, we need to query the datastore
+                const auto block_name = _dataStore->BlockName(block_start[0], block_end[0], block_start[1],
+                                                              block_end[1], block_start[2], block_end[2], voxel_offset);
+                auto block_size = BlockManager::BlockSizeFromExtents(block_start, block_end);
+
+                blockShPtr = _dataStore->GetBlock(block_name, scale_key, block_size[0], block_size[1], block_size[2],
+                                                  sizeof(T), block_encoding, _blockDataType, _blockSettingsPtr);
+                if (!blockShPtr) continue;
+            } else {
                 // add to the output array
-                std::shared_ptr<Block> blockShPtr = itr->second;
-
-                auto block_start = BlockManager::BlockStart(block_key, chunk_size);
-                auto block_end = BlockManager::BlockEnd(block_key, chunk_size, image_size);
-
-                // Get the portion of the cutout that lives within this block
-                const auto block_restricted_cutout =
-                    BlockManager::GetDataView(block_start, block_end, cutout_start_abs, cutout_end_abs);
-
-                auto xview = std::array<int, 2>({block_restricted_cutout.first[0] - cutout_start_abs[0],
-                                                 block_restricted_cutout.second[0] - cutout_start_abs[0]});
-                auto yview = std::array<int, 2>({block_restricted_cutout.first[1] - cutout_start_abs[1],
-                                                 block_restricted_cutout.second[1] - cutout_start_abs[1]});
-                auto zview = std::array<int, 2>({block_restricted_cutout.first[2] - cutout_start_abs[2],
-                                                 block_restricted_cutout.second[2] - cutout_start_abs[2]});
-
-                auto output_data_view = output.view(xview, yview, zview);
-
-                // Offset if the cutout starts somewhere in the middle of the block
-                int x_block_offset = block_restricted_cutout.first[0] - block_start[0];
-                int y_block_offset = block_restricted_cutout.first[1] - block_start[1];
-                int z_block_offset = block_restricted_cutout.first[2] - block_start[2];
-
-                blockShPtr->get<T>(output_data_view, x_block_offset, y_block_offset, z_block_offset);
+                blockShPtr = itr->second;
             }
+
+            // Get the portion of the cutout that lives within this block
+            const auto block_restricted_cutout =
+                BlockManager::GetDataView(block_start, block_end, cutout_start_abs, cutout_end_abs);
+
+            auto xview = std::array<int, 2>({block_restricted_cutout.first[0] - cutout_start_abs[0],
+                                             block_restricted_cutout.second[0] - cutout_start_abs[0]});
+            auto yview = std::array<int, 2>({block_restricted_cutout.first[1] - cutout_start_abs[1],
+                                             block_restricted_cutout.second[1] - cutout_start_abs[1]});
+            auto zview = std::array<int, 2>({block_restricted_cutout.first[2] - cutout_start_abs[2],
+                                             block_restricted_cutout.second[2] - cutout_start_abs[2]});
+
+            auto output_data_view = output.view(xview, yview, zview);
+
+            // Offset if the cutout starts somewhere in the middle of the block
+            int x_block_offset = block_restricted_cutout.first[0] - block_start[0];
+            int y_block_offset = block_restricted_cutout.first[1] - block_start[1];
+            int z_block_offset = block_restricted_cutout.first[2] - block_start[2];
+
+            blockShPtr->get<T>(output_data_view, x_block_offset, y_block_offset, z_block_offset);
         }
         return;
     }
@@ -217,9 +197,6 @@ class BlockManager {
     std::array<int, 3> getVoxelOffsetForScale(const std::string& scale_key);
     std::array<int, 3> getSizeForScale(const std::string& scale_key);
     BlockEncoding getEncodingForScale(const std::string& scale_key);
-
-    static BlockInfo GetBlockInfoFromName(const std::string& filename, const std::array<int, 3> chunk_size,
-                                          const std::array<int, 3>& voxel_offset);
 
     static std::array<int, 3> BlockStart(const BlockKey& block_key, const std::array<int, 3>& block_size);
     static std::array<int, 3> BlockEnd(const BlockKey& block_key, const std::array<int, 3>& block_size,
@@ -237,14 +214,13 @@ class BlockManager {
     void _init();
     // void _flush(); TODO(adb): automatically flushed on destruction, but maybe
     // we want to implement this eventually
-    std::shared_ptr<BlockMortonIndexMap> _createIndexForScale(const std::string& scale);
 
-    std::string directory_path_name;
-    std::unordered_map<std::string, std::shared_ptr<BlockMortonIndexMap>> block_index_by_res;
     std::shared_ptr<Manifest> manifest;
-    BlockDataStore _blockDataStore;
-    BlockDataType _blockDataType;
+    std::shared_ptr<BlockDataStore> _dataStore;
     std::shared_ptr<BlockSettings> _blockSettingsPtr;
+
+    std::unordered_map<std::string, std::shared_ptr<BlockMortonIndexMap>> block_index_by_res;
+    BlockDataType _blockDataType;
 };
 
 }  // namespace BlockManager_namespace

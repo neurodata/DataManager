@@ -22,6 +22,7 @@
 
 #include <BlockManager/BlockManager.h>
 #include <BlockManager/Blocks/Block.h>
+#include <BlockManager/Datastore/FilesystemBlockStore.h>
 #include <DataArray/DataArray.h>
 
 using namespace BlockManager_namespace;
@@ -75,6 +76,10 @@ static std::shared_ptr<Manifest> setup_filesystem_datastore() {
     return make_manifest();
 }
 
+static std::shared_ptr<FilesystemBlockStore> filesystem_datastore_ptr() {
+    return std::make_shared<FilesystemBlockStore>(FilesystemBlockStore(test_directory));
+}
+
 std::shared_ptr<DataArray_namespace::DataArray<uint32_t>> make_test_array(unsigned int xsize, unsigned int ysize,
                                                                           unsigned int zsize, int test_id) {
     auto dataArrayShPtr = std::make_shared<DataArray_namespace::DataArray<uint32_t>>(xsize, ysize, zsize);
@@ -104,9 +109,9 @@ void check_arr_equal(const DataArray_namespace::DataArray<uint32_t>& A,
 class BlockManagerTest : public ::testing::Test {
    protected:
     BlockManagerTest() {
-        setup_filesystem_datastore();
+        auto manifestShPtr = setup_filesystem_datastore();
         BLMShPtr = std::make_shared<BlockManager>(
-            BlockManager(test_directory, make_manifest(), BlockDataStore::FILESYSTEM, BlockSettings({/*gzip=*/false})));
+            BlockManager(manifestShPtr, filesystem_datastore_ptr(), BlockSettings({/*gzip=*/false})));
     }
 
     ~BlockManagerTest() { delete_directory(test_directory); }
@@ -267,9 +272,9 @@ class BlockManagerTestGzip : public ::testing::Test {
     BlockManagerTestGzip() {
         // Note that since setup is done only once, it is important to ensure regions below do not overlap (or only
         // overlap fully). Otherwise, test failures may occur due to "old" data being present in the test results.
-        setup_filesystem_datastore();
+        auto manifestShPtr = setup_filesystem_datastore();
         BLMShPtr = std::make_shared<BlockManager>(
-            BlockManager(test_directory, make_manifest(), BlockDataStore::FILESYSTEM, BlockSettings({/*gzip=*/true})));
+            BlockManager(manifestShPtr, filesystem_datastore_ptr(), BlockSettings({/*gzip=*/true})));
     }
 
     ~BlockManagerTestGzip() { delete_directory(test_directory); }
