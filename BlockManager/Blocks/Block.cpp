@@ -15,6 +15,7 @@
 
 #include "Block.h"
 
+#include <Util/JPEG.h>
 #include <third_party/CompressedSegmentation/compress_segmentation.h>
 #include <third_party/CompressedSegmentation/decompress_segmentation.h>
 
@@ -167,6 +168,39 @@ void Block::_fromRaw(std::unique_ptr<char[]> input) {
     local_arr.copy(_data, _xdim, _ydim, _zdim);
 }
 
-SerializedBlockOutput Block::_toJpeg() { return SerializedBlockOutput({nullptr, 0}); }
+SerializedBlockOutput Block::_toJpeg() {
+    // TODO(adb): put this in a method, we seem to need it fairly often
+    // Convert data to Fortran order
+    size_t arr_size = _xdim * _ydim * _zdim * _dtype_size;
+    std::unique_ptr<char[]> _tmp_data(new char[arr_size]);
+
+    auto tmp_data_ptr_x = _tmp_data.get();
+    auto data_ptr_x = _data.get();
+
+    for (int x = 0; x < _xdim; x++) {
+        auto* tmp_data_ptr_y = tmp_data_ptr_x;
+        auto* data_ptr_y = data_ptr_x;
+        for (int y = 0; y < _ydim; y++) {
+            auto* tmp_data_ptr_z = tmp_data_ptr_y;
+            auto* data_ptr_z = data_ptr_y;
+            for (int z = 0; z < _zdim; z++) {
+                auto* tmp_data_ptr = tmp_data_ptr_z;
+                auto* data_ptr = data_ptr_z;
+                std::memcpy(tmp_data_ptr, data_ptr, _dtype_size);
+
+                data_ptr_z += _dtype_size;
+                tmp_data_ptr_z += _dtype_size * _xdim * _ydim;
+            }
+            data_ptr_y += _dtype_size * _zdim;
+            tmp_data_ptr_y += _dtype_size * _xdim;
+        }
+        data_ptr_x += _dtype_size * _zdim * _ydim;
+        tmp_data_ptr_x += _dtype_size;
+    }
+
+    auto jpegData = JPEG::toJPEG(_xdim, _ydim * _zdim, /*quality=*/90, _tmp_data);
+
+    return {std::move(jpegData.second), jpegData.first};
+}
 
 void Block::_fromJpeg(std::unique_ptr<char[]> input) { LOG(FATAL) << "Error: reading jpeg blocks not implemented."; }

@@ -53,6 +53,15 @@ static bool DeprecateDataDirFlag(const char* filename, const std::string& value)
     return true;
 }
 
+const std::set<std::string> SUPPORTED_DATATYPES = {"uint8", "uint16", "uint32", "uint64", "float"};
+static bool ValidateInputDataType(const char* flagname, const std::string& value) {
+    if (SUPPORTED_DATATYPES.find(value) != SUPPORTED_DATATYPES.end()) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 DEFINE_string(datadir, "", "Deprecated: Use `-datastore` instead.");
 DEFINE_validator(datadir, &DeprecateDataDirFlag);
 DEFINE_string(datastore, "",
@@ -68,6 +77,8 @@ DEFINE_string(
     "Input/output file format. Currently only 'tif' is supported.");
 #endif
 DEFINE_validator(format, &ValidateInputFileFormat);
+DEFINE_string(datatype, "uint32", "Datatype of the input file. Should match the datatype in the Datastore Manifest.");
+DEFINE_validator(datatype, &ValidateInputDataType);
 DEFINE_int64(x, 0, "The x-dim of the input/output file.");
 DEFINE_int64(y, 0, "The y-dim of the input/output file.");
 DEFINE_int64(z, 0, "The z-dim of the input/output file.");
@@ -113,17 +124,35 @@ int main(int argc, char* argv[]) {
     if (FLAGS_input.size() > 0) {
         // ingest
         if (FLAGS_format == "tif") {
-            auto im_array = DataArray_namespace::TiffArray<uint32_t>(FLAGS_x, FLAGS_y, FLAGS_z);
-            im_array.load(FLAGS_input);
-
-            BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
+            if (FLAGS_datatype == "uint8") {
+                auto im_array = DataArray_namespace::TiffArray<uint8_t>(FLAGS_x, FLAGS_y, FLAGS_z);
+                im_array.load(FLAGS_input);
+    
+                BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
+            } else if (FLAGS_datatype == "uint32") {
+                auto im_array = DataArray_namespace::TiffArray<uint32_t>(FLAGS_x, FLAGS_y, FLAGS_z);
+                im_array.load(FLAGS_input);
+    
+                BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
+            } else {
+                LOG(WARNING) << "Data type " << FLAGS_datatype << " is currently unsupported for tif input files.";
+            }
         }
 #ifdef HAVE_BLOSC
         else if (FLAGS_format == "blosc") {
-            auto im_array = DataArray_namespace::BloscArray<uint32_t>(FLAGS_x, FLAGS_y, FLAGS_z);
-            im_array.load(FLAGS_input);
-
-            BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
+            if (FLAGS_datatype == "uint8") {
+                auto im_array = DataArray_namespace::BloscArray<uint8_t>(FLAGS_x, FLAGS_y, FLAGS_z);
+                im_array.load(FLAGS_input);
+    
+                BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
+            } else if (FLAGS_datatype == "uint32") {
+                auto im_array = DataArray_namespace::BloscArray<uint32_t>(FLAGS_x, FLAGS_y, FLAGS_z);
+                im_array.load(FLAGS_input);
+    
+                BLM.Put(im_array, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
+            } else {
+                LOG(WARNING) << "Data type " << FLAGS_datatype << " is currently unsupported for blosc encoded input files.";
+            }
         }
 #endif
     } else if (FLAGS_output.size() > 0) {
@@ -135,6 +164,9 @@ int main(int argc, char* argv[]) {
             BLM.Get(output_arr, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
 
             output_arr.save(FLAGS_output);
+        } else {
+            LOG(WARNING) << "Unsupported output file format: " << FLAGS_format << "\nQuitting.";
+            return EXIT_FAILURE;
         }
     } else {
         LOG(WARNING) << "No input or output file specified. Nothing to do.";
