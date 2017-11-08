@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 2.8)
 project (DataManager)
 set (DataManager_VERSION_MAJOR 0)
-set (DataManager_VERSION_MINOR 2)
-set (DataManager_VERSION_PATCH 1)
+set (DataManager_VERSION_MINOR 3)
+set (DataManager_VERSION_PATCH 0)
 string(TIMESTAMP DataManager_VERSION_BUILDDATE "%Y%m%d")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
