@@ -36,7 +36,7 @@ void TiffArray<T>::load(const std::string& filename) {
         for (size_t row = 0; row < height; row++) {
             TIFFReadScanline(tif, data, row);
             for (size_t x = 0; x < width; x++) {
-                (*this->M)[x][row][page] = static_cast<T>(data[x * sizeof(T)]);
+                (*this->M)[x][row][page] = *reinterpret_cast<T*>(&data[x * sizeof(T)]);
             }
         }
 
