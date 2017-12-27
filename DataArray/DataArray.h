@@ -81,6 +81,9 @@ class DataArray {
     void copy(std::unique_ptr<char[]>& data, unsigned int xdim, unsigned int ydim, unsigned int zdim) const {
         std::memcpy(data.get(), M->origin(), xdim * ydim * zdim * sizeof(T));
     }
+    void set(void* data, unsigned int xdim, unsigned int ydim, unsigned int zdim) {
+        std::memcpy(M->origin(), data, xdim * ydim * zdim * sizeof(T));
+    }
 
     T* origin() { return M->origin(); }
 

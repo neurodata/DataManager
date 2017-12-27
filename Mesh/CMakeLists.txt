@@ -10,7 +10,7 @@ endif()
 set(MESH_LIBS ${Glog_LIBRARIES} ${Boost_LIBRARIES})
 set(MESH_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include ${Glog_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 
-set(MESH_SOURCES MeshExtractor.cpp TriangleMeshIO.cpp)
+set(MESH_SOURCES MeshExtractor.cpp TriangleMeshIO.cpp ExtractNeuroglancerMesh.cpp)
 
 add_library(Mesh ${MESH_SOURCES})
 
