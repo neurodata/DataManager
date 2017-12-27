@@ -24,7 +24,7 @@
 
 namespace MeshExtractor_namespace {
 
-typedef DataArray_namespace::DataArray3D<uint32_t> DataArray32;
+typedef DataArray_namespace::DataArray<uint32_t> DataArray32;
 typedef std::shared_ptr<DataArray32> DataArray32ShPtr;
 
 struct MarchingCubesProperties {
@@ -36,7 +36,7 @@ struct MarchingCubesProperties {
 
 class MeshExtractor {
    public:
-    MeshExtractor(const std::shared_ptr<DataArray_namespace::DataArray3D<uint32_t>> input_voxel_grid, unsigned int xdim,
+    MeshExtractor(const std::shared_ptr<DataArray_namespace::DataArray<uint32_t>> input_voxel_grid, unsigned int xdim,
                   unsigned int ydim, unsigned int zdim, const std::shared_ptr<MarchingCubesProperties>& props);
     ~MeshExtractor() {}
 
@@ -51,7 +51,7 @@ class MeshExtractor {
                                                      unsigned int ydim, unsigned int zdim, uint32_t id);
 
    protected:
-    std::shared_ptr<DataArray_namespace::DataArray3D<uint32_t>> voxel_grid;
+    std::shared_ptr<DataArray_namespace::DataArray<uint32_t>> voxel_grid;
     unsigned int _xdim;
     unsigned int _ydim;
     unsigned int _zdim;
@@ -68,7 +68,7 @@ class MeshExtractor {
 
 class MishaMeshExtractor : public MeshExtractor {
    public:
-    MishaMeshExtractor(const std::shared_ptr<DataArray_namespace::DataArray3D<uint32_t>> input_voxel_grid,
+    MishaMeshExtractor(const std::shared_ptr<DataArray_namespace::DataArray<uint32_t>> input_voxel_grid,
                        unsigned int xdim, unsigned int ydim, unsigned int zdim,
                        const std::shared_ptr<MarchingCubesProperties>& props)
         : MeshExtractor(input_voxel_grid, xdim, ydim, zdim, props) {}
@@ -93,7 +93,7 @@ class MishaMeshExtractor : public MeshExtractor {
 
 class NeuroglancerMeshExtractor : public MeshExtractor {
    public:
-    NeuroglancerMeshExtractor(const std::shared_ptr<DataArray_namespace::DataArray3D<uint32_t>> input_voxel_grid,
+    NeuroglancerMeshExtractor(const std::shared_ptr<DataArray_namespace::DataArray<uint32_t>> input_voxel_grid,
                               unsigned int xdim, unsigned int ydim, unsigned int zdim,
                               const std::shared_ptr<MarchingCubesProperties>& props)
         : MeshExtractor(input_voxel_grid, xdim, ydim, zdim, props) {}

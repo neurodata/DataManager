@@ -85,6 +85,8 @@ void TiffArray<T>::save(const std::string& filename) {
     }
 }
 
+namespace DataArray_namespace {
+
 #define DO_INSTANTIATE(T)        \
     template class TiffArray<T>; \
     /**/
@@ -96,3 +98,5 @@ DO_INSTANTIATE(uint64_t)
 DO_INSTANTIATE(float)
 
 #undef DO_INSTANTIATE
+
+}  // namespace DataArray_namespace

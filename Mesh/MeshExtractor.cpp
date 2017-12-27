@@ -15,6 +15,7 @@
 
 #include "MeshExtractor.h"
 
+#include <glog/logging.h>
 #include <third_party/NeuroglancerMesh/mesh_objects.h>
 #include "MarchingCubes.h"
 #include "PolygonalMesh.h"
@@ -23,7 +24,9 @@
 #include <map>
 #include <set>
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 using namespace MeshExtractor_namespace;
 using namespace neuroglancer;
@@ -31,7 +34,7 @@ using namespace neuroglancer;
 // TODO(adb): need to decide where we want to template and where we don't want to template...
 typedef float Real;
 
-MeshExtractor::MeshExtractor(const std::shared_ptr<DataArray_namespace::DataArray3D<uint32_t>> input_voxel_grid,
+MeshExtractor::MeshExtractor(const std::shared_ptr<DataArray_namespace::DataArray<uint32_t>> input_voxel_grid,
                              unsigned int xdim, unsigned int ydim, unsigned int zdim,
                              const std::shared_ptr<MarchingCubesProperties>& props)
     : voxel_grid(input_voxel_grid), _xdim(xdim), _ydim(ydim), _zdim(zdim), _props(props) {}
@@ -112,7 +115,7 @@ void MishaMeshExtractor::extract(std::vector<std::shared_ptr<TriangleMesh<float>
             flags[i] = MarchingCubes::ValueLabel(BinaryGridValue(i), _isovalue);
         }
 
-            // Get the zero-crossings along the x-edges
+        // Get the zero-crossings along the x-edges
 #pragma omp parallel for
         for (unsigned int i = 0; i < _xdim - 1; i++)
             for (unsigned int j = 0; j < _ydim; j++)
@@ -136,7 +139,7 @@ void MishaMeshExtractor::extract(std::vector<std::shared_ptr<TriangleMesh<float>
                     }
                 }
 
-                    // Get the zero-crossings along the y-edges
+                // Get the zero-crossings along the y-edges
 #pragma omp parallel for
         for (unsigned int i = 0; i < _xdim; i++)
             for (unsigned int j = 0; j < _ydim - 1; j++)
@@ -160,7 +163,7 @@ void MishaMeshExtractor::extract(std::vector<std::shared_ptr<TriangleMesh<float>
                     }
                 }
 
-                    // Get the zero-crossings along the z-edges
+                // Get the zero-crossings along the z-edges
 #pragma omp parallel for
         for (unsigned int i = 0; i < _xdim; i++)
             for (unsigned int j = 0; j < _ydim; j++)

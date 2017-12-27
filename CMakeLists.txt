@@ -105,4 +105,4 @@ target_link_libraries(skeleton ${SKELETON_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_
 set(MESH_LIBRARIES Mesh)
 
 add_executable(mesh Mesh.cpp)
-target_link_libraries(mesh ${MESH_LIBRARIES} ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES})
+target_link_libraries(mesh ${MESH_LIBRARIES} ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES} ${ZLIB_LIBRARIES})

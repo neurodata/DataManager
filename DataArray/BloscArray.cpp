@@ -67,6 +67,8 @@ void BloscArray<T>::save(const std::string& filename) {
     LOG(FATAL) << "Error: Saving DataArray in Blosc format is not supported.";
 }
 
+namespace DataArray_namespace {
+
 #define DO_INSTANTIATE(T)         \
     template class BloscArray<T>; \
     /**/
@@ -78,3 +80,5 @@ DO_INSTANTIATE(uint64_t)
 DO_INSTANTIATE(float)
 
 #undef DO_INSTANTIATE
+
+}  // namespace DataArray_namespace

@@ -70,7 +70,7 @@ static boolean jpeg_mem_empty_output_buffer(j_compress_ptr cinfo) {
     dest->data.resize(old_sz + JPEG_MEM_DST_MGR_BUFFER_SIZE);
     cinfo->dest->next_output_byte = dest->data.data() + old_sz;
     cinfo->dest->free_in_buffer = JPEG_MEM_DST_MGR_BUFFER_SIZE;
-    return true;
+    return (boolean) true;
 }
 
 static void jpeg_mem_dest(j_compress_ptr cinfo, jpeg_destination_mem_mgr* dest) {

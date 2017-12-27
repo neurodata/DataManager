@@ -16,11 +16,13 @@
 #include "NeuroDataManager.h"
 
 #include "BlockManager/BlockManager.h"
+#include "BlockManager/Datastore/FilesystemBlockStore.h"
 #include "BlockManager/Manifest.h"
 #include "Mesh/MeshExtractor.h"
 #include "Mesh/TriangleMesh.h"
 #include "Mesh/TriangleMeshIO.h"
 
+#include <iostream>
 #include <memory>
 
 #include <gflags/gflags.h>
@@ -28,6 +30,14 @@
 #include <boost/filesystem.hpp>
 
 namespace fs = boost::filesystem;
+
+static bool DeprecateDataDirFlag(const char* filename, const std::string& value) {
+    if (value.size() > 0) {
+        std::cerr << "The `-datadir` flag has been deprecated. Use `-datastore` instead.\n";
+        return false;
+    }
+    return true;
+}
 
 static bool ValidateMeshFileFormat(const char* filename, const std::string& value) {
     if (value == std::string("neuroglancer") || value == std::string("ply")) {
@@ -43,7 +53,11 @@ static bool ValidateMeshExtractor(const char* filename, const std::string& value
     return false;
 }
 
-DEFINE_string(datadir, "", "Path to the data directory containing a Neuroglancer JSON manifest.");
+DEFINE_string(datadir, "", "Deprecated: Use `-datastore` instead.");
+DEFINE_validator(datadir, &DeprecateDataDirFlag);
+DEFINE_string(datastore, "",
+              "Path to the data directory containing a Neuroglancer JSON "
+              "Manifest.");
 DEFINE_int64(x, 0, "The x-dim of the input/output file.");
 DEFINE_int64(y, 0, "The y-dim of the input/output file.");
 DEFINE_int64(z, 0, "The z-dim of the input/output file.");
@@ -88,18 +102,19 @@ int main(int argc, char* argv[]) {
     const auto manifest_path = path / fs::path("info");
     CHECK(fs::is_regular_file(manifest_path));
 
-    auto manifestShPtr =
-        std::make_shared<BlockManager_namespace::Manifest>(BlockManager_namespace::Manifest(manifest_path.string()));
-
+    LOG(INFO) << "Using data store " << FLAGS_datastore;
+    auto dataStoreShPtr = std::make_shared<BlockManager_namespace::FilesystemBlockStore>(
+        BlockManager_namespace::FilesystemBlockStore(FLAGS_datastore));
     BlockManager_namespace::BlockSettings settings({FLAGS_gzip});
-    BlockManager_namespace::BlockManager BLM(path.string(), manifestShPtr,
-                                             BlockManager_namespace::BlockDataStore::FILESYSTEM, settings);
+    auto manifestShPtr = dataStoreShPtr->GetManifest();
+
+    BlockManager_namespace::BlockManager BLM(manifestShPtr, dataStoreShPtr, settings);
 
     auto xrng = std::array<int, 2>({{static_cast<int>(FLAGS_xoffset), static_cast<int>(FLAGS_x + FLAGS_xoffset)}});
     auto yrng = std::array<int, 2>({{static_cast<int>(FLAGS_yoffset), static_cast<int>(FLAGS_y + FLAGS_yoffset)}});
     auto zrng = std::array<int, 2>({{static_cast<int>(FLAGS_zoffset), static_cast<int>(FLAGS_z + FLAGS_zoffset)}});
 
-    auto voxel_grid = std::make_shared<DataArray_namespace::DataArray3D<uint32_t>>(FLAGS_x, FLAGS_y, FLAGS_z);
+    auto voxel_grid = std::make_shared<DataArray_namespace::DataArray<uint32_t>>(FLAGS_x, FLAGS_y, FLAGS_z);
     LOG(INFO) << "Making cutout request";
     BLM.Get(*voxel_grid, xrng, yrng, zrng, FLAGS_scale, FLAGS_subtractVoxelOffset);
     LOG(INFO) << "Retrieved a " << xrng[1] - xrng[0] << " x " << yrng[1] - yrng[0] << " x " << zrng[1] - zrng[0]

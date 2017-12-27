@@ -47,9 +47,13 @@ void TriangleMeshIO<Real>::WriteNeuroglancerBin(const std::string& filename, con
     }
 }
 
+namespace MeshExtractor_namespace {
+
 #define DO_INSTANTIATE(Real)              \
     template struct TriangleMeshIO<Real>; \
 /**/
 DO_INSTANTIATE(float)
 DO_INSTANTIATE(double)
 #undef DO_INSTANTIATE
+
+}  // namespace MeshExtractor_namespace
