@@ -5,6 +5,9 @@ set (DataManager_VERSION_MINOR 3)
 set (DataManager_VERSION_PATCH 1)
 string(TIMESTAMP DataManager_VERSION_BUILDDATE "%Y%m%d")
 
+set (DATA_MANAGER_LIB_DIR "/usr/local/lib/ndm")
+set (DATA_MANAGER_INC_DIR "/usr/local/include/ndm")
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 option(USE_STATIC_LIBS "Link against static libraries.")
@@ -92,7 +95,7 @@ endif(ENABLE_TESTS)
 
 set(BLOCK_MANAGER_LIBRARIES BlockManager)
 set(DATA_ARRAY_LIBRARIES DataArray)
-set(MESH_LIBRARIES MeshLib)
+set(MESH_LIBRARIES Mesh)
 
 add_executable(ndm NeuroDataManager.cpp)
 target_link_libraries(ndm ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES} ${Gflags_LIBRARIES} ${Glog_LIBRARIES} ${ZLIB_LIBRARIES} ${TIFF_LIBRARIES})
@@ -101,8 +104,6 @@ set(SKELETON_LIBRARIES Skeleton)
 
 add_executable(skeleton Skeleton.cpp)
 target_link_libraries(skeleton ${SKELETON_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES} ${ZLIB_LIBRARIES})
-
-set(MESH_LIBRARIES Mesh)
 
 add_executable(mesh Mesh.cpp)
 target_link_libraries(mesh ${MESH_LIBRARIES} ${BLOCK_MANAGER_LIBRARIES} ${DATA_ARRAY_LIBRARIES} ${Glog_LIBRARIES} ${Gflags_LIBRARIES} ${Boost_LIBRARIES} ${Folly_LIBRARIES} ${ZLIB_LIBRARIES})

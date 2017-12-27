@@ -17,3 +17,6 @@ add_library(DataArray ${DATA_ARRAY_SOURCES})
 
 target_include_directories(DataArray PRIVATE ${DATA_ARRAY_INCLUDE_DIRS})
 target_link_libraries(DataArray ${DATA_ARRAY_LIBS})
+
+set_target_properties(DataArray PROPERTIES PUBLIC_HEADER "DataArray.h;BloscArray.h;TiffArray.h")
+INSTALL(TARGETS DataArray ARCHIVE DESTINATION ${DATA_MANAGER_LIB_DIR} PUBLIC_HEADER DESTINATION ${DATA_MANAGER_INC_DIR}/DataArray)

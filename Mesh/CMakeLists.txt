@@ -16,3 +16,6 @@ add_library(Mesh ${MESH_SOURCES})
 
 target_include_directories(Mesh PRIVATE ${MESH_INCLUDE_DIRS})
 target_link_libraries(Mesh ${MESH_LIBS} neuroglancer_mesh)
+
+set_target_properties(Mesh PROPERTIES PUBLIC_HEADER "ExtractNeuroglancerMesh.h;MeshExtractor.h;TriangleMeshIO.h")
+INSTALL(TARGETS Mesh ARCHIVE DESTINATION ${DATA_MANAGER_LIB_DIR} PUBLIC_HEADER DESTINATION ${DATA_MANAGER_INC_DIR}/Mesh)
